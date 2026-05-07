@@ -1,0 +1,41 @@
+{
+    "buildPresets": [
+        {
+            "configurePreset": "Debug",
+            "displayName": "Debug",
+            "name": "Debug"
+        },
+        {
+            "configurePreset": "RelWithDebInfo",
+            "displayName": "Release (with debug info)",
+            "name": "RelWithDebInfo"
+        }
+    ],
+    "configurePresets": [
+        {
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {},
+            "generator": "Ninja",
+            "hidden": true,
+            "name": "default",
+            "toolchainFile": "${sourceDir}/cmake/toolchains/gcc-arm-none-eabi.cmake"
+        },
+        {
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            },
+            "displayName": "Debug",
+            "inherits": "default",
+            "name": "Debug"
+        },
+        {
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            },
+            "displayName": "Release (with debug info)",
+            "inherits": "default",
+            "name": "RelWithDebInfo"
+        }
+    ],
+    "version": 3
+}

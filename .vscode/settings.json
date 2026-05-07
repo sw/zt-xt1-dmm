@@ -1,0 +1,20 @@
+{
+    "clangd.arguments": [
+        "--compile-commands-dir=${command:cmake.buildDirectory}",
+        "--query-driver=/usr/bin/arm-none-eabi-gcc,/usr/bin/cc"
+    ],
+    "cmake.options.advanced": {
+        "configurePreset": {
+            "statusBarVisibility": "visible"
+        }
+    },
+    "cmake.useCMakePresets": "always",
+    "cortex-debug.gdbPath.linux": "gdb-multiarch",
+    "cortex-debug.objdumpPath.linux": "arm-none-eabi-objdump",
+    "files.associations": {
+        "*.h": "c"
+    },
+    "files.insertFinalNewline": true,
+    "files.trimFinalNewlines": true,
+    "files.trimTrailingWhitespace": true
+}
