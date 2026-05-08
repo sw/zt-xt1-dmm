@@ -35,6 +35,7 @@ void * theme_zt;
  **********************/
 typedef struct {
     lv_style_t scr;
+    lv_style_t invisible;
     //lv_style_t transp;
     //lv_style_t white;
     //lv_style_t light;
@@ -86,6 +87,10 @@ static void style_init(my_theme_t * theme)
     lv_style_set_bg_color(&theme->styles.scr, COLOR_SCR);
     lv_style_set_text_color(&theme->styles.scr, COLOR_WHITE);
     lv_style_set_text_align(&theme->styles.scr, LV_TEXT_ALIGN_CENTER);
+
+    style_init_reset(&theme->styles.invisible);
+    lv_style_set_bg_opa(&theme->styles.invisible, LV_OPA_TRANSP);
+    lv_style_set_text_opa(&theme->styles.invisible, LV_OPA_TRANSP);
 
     //style_init_reset(&theme->styles.transp);
     //lv_style_set_bg_opa(&theme->styles.transp, LV_OPA_TRANSP);
@@ -261,6 +266,9 @@ static void theme_apply(lv_theme_t * th, lv_obj_t * obj)
 #endif
         lv_obj_add_style(obj, &theme->styles.scr, 0);
         //lv_obj_add_style(obj, &theme->styles.scrollbar, LV_PART_SCROLLBAR);
+    }
+    else if (lv_obj_check_type(obj, &lv_label_class)) {
+        lv_obj_add_style(obj, &theme->styles.invisible, LV_STATE_DISABLED);
     }
 #if LV_USE_BUTTON
     else if(lv_obj_check_type(obj, &lv_button_class)) {

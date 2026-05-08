@@ -1,18 +1,8 @@
-#include <src/core/lv_obj.h>
-#include <src/font/lv_font.h>
-#include <src/indev/lv_indev.h>
-#include <src/misc/lv_color.h>
-#include <src/misc/lv_event.h>
-#include <src/themes/default/lv_theme_default.h>
 #include <stdbool.h>
-//#include <stdio.h>
 
 #include "at32f403a_407_conf.h"
 
-#include "at32f403a_407_wdt.h"
-
 #include "lvgl.h"
-#include "src/tick/lv_tick.h"
 
 #include "beep.h"
 #include "delay.h"
@@ -295,6 +285,15 @@ void key_event_cb(lv_event_t *e)
     }
 }
 
+static lv_obj_t *label_create_fixed(lv_obj_t *parent, const char *text)
+{
+    lv_obj_t *label = lv_label_create(parent);
+    lv_label_set_text_static(label, text);
+    lv_obj_update_layout(label);
+    lv_obj_set_width(label, lv_obj_get_width(label));
+    return label;
+}
+
 int main(void)
 {
     nvic_priority_group_config(NVIC_PRIORITY_GROUP_4);
@@ -330,60 +329,45 @@ int main(void)
     lv_obj_set_flex_flow(top_row, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(top_row, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
 
-    lv_obj_t *hold = lv_label_create(top_row);
-    lv_label_set_text(hold, "HOLD");
+    lv_obj_t *hold = label_create_fixed(top_row, "HOLD");
     lv_obj_set_style_text_color(hold, lv_color_make(0xff, 0, 0), 0);
 
-    lv_obj_t *auto_rel = lv_label_create(top_row);
+    lv_obj_t *auto_rel = label_create_fixed(top_row, "AUTO");
 
-    lv_obj_t *meas_freq = lv_label_create(top_row);
+    lv_obj_t *meas_freq = label_create_fixed(top_row, "0.000Hz");
 
     lv_obj_t *obj;
     obj = lv_label_create(top_row);
-    lv_label_set_text(obj, "BATT");
+    lv_label_set_text_static(obj, "BATT");
+
 
     lv_obj_t *meas_row = lv_obj_create(rows);
     lv_obj_set_size(meas_row, lv_pct(100), LV_SIZE_CONTENT);
     lv_obj_set_flex_flow(meas_row, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(meas_row, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_START);
 
-    lv_obj_t *ac_dc = lv_label_create(meas_row);
-    //lv_label_set_text(ac_dc, "DC");
+    lv_obj_t *ac_dc = label_create_fixed(meas_row, "DC");
     lv_obj_set_height(ac_dc, lv_pct(100));
 
     lv_obj_t *meas_main = lv_label_create(meas_row);
     lv_obj_set_style_text_font(meas_main, &noto_sans_semibold_64, 0);
-    //lv_label_set_text(meas_main, "-2.4909");
+    lv_label_set_text_static(meas_main, "-2.4999");
+    lv_obj_update_layout(meas_main);
+    lv_obj_set_width(meas_main, lv_obj_get_width(meas_main));
+    lv_obj_set_style_text_align(meas_main, LV_TEXT_ALIGN_RIGHT, 0);
 
-    lv_obj_t *meas_unit = lv_label_create(meas_row);
-    //lv_label_set_text(meas_unit, "mV");
-
-    obj = lv_label_create(rows);
-    lv_obj_set_width(obj, lv_pct(100));
-    lv_label_set_text(obj, "TODO: statistics");
+    lv_obj_t *meas_unit = label_create_fixed(meas_row, "MΩ");
 
     obj = lv_label_create(rows);
     lv_obj_set_width(obj, lv_pct(100));
-    lv_label_set_text(obj, "TODO: graph");
+    lv_label_set_text_static(obj, "TODO: statistics");
+
+    obj = lv_label_create(rows);
+    lv_obj_set_width(obj, lv_pct(100));
+    lv_label_set_text_static(obj, "TODO: graph");
     lv_obj_set_style_bg_color(obj, lv_color_make(0, 0x44, 0), 0); lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, 0);
     lv_obj_set_flex_grow(obj, 1);
 
-#if 0
-    lv_obj_t *rect_r = lv_obj_create(scr);
-    lv_obj_set_size(rect_r, 60, 60);
-    lv_obj_set_pos(rect_r, 60, 50);
-    lv_obj_set_style_bg_color(rect_r, lv_color_make(0xff, 0x00, 0x00), 0);
-
-    lv_obj_t *rect_g = lv_obj_create(scr);
-    lv_obj_set_size(rect_g, 60, 60);
-    lv_obj_set_pos(rect_g, 130, 50);
-    lv_obj_set_style_bg_color(rect_g, lv_color_make(0x00, 0xff, 0x00), 0);
-
-    lv_obj_t *rect_b = lv_obj_create(scr);
-    lv_obj_set_size(rect_b, 60, 60);
-    lv_obj_set_pos(rect_b, 200, 50);
-    lv_obj_set_style_bg_color(rect_b, lv_color_make(0x00, 0x00, 0xff), 0);
-#endif
 
     lv_indev_t *indev = lv_indev_create();
     lv_indev_set_type(indev, LV_INDEV_TYPE_KEYPAD);
@@ -411,40 +395,40 @@ int main(void)
 
             if (dmm_hold)
             {
-                lv_obj_remove_flag(hold, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_set_state(hold, LV_STATE_DISABLED, false);
                 continue;
             }
-            lv_obj_add_flag(hold, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_set_state(hold, LV_STATE_DISABLED, true);
 
             if (result.auto_range)
             {
-                lv_label_set_text(auto_rel, "AUTO");
+                lv_label_set_text_static(auto_rel, "AUTO");
             }
             else if (result.rel)
             {
-                lv_label_set_text(auto_rel, "REL");
+                lv_label_set_text_static(auto_rel, "REL");
             }
             else if (result.continuity)
             {
-                lv_label_set_text(auto_rel, "CONT");
+                lv_label_set_text_static(auto_rel, "CONT");
             }
             else if (result.diode)
             {
-                lv_label_set_text(auto_rel, "-|>|-");
+                lv_label_set_text_static(auto_rel, "-|>|-");
             }
             else
             {
-                lv_label_set_text(auto_rel, "");
+                lv_label_set_text_static(auto_rel, "");
             }
 
-            lv_label_set_text(meas_freq, "");
+            lv_label_set_text_static(meas_freq, "");
             if (result.dc)
             {
-                lv_label_set_text(ac_dc, "DC");
+                lv_label_set_text_static(ac_dc, "DC");
             }
             else if (result.ac)
             {
-                lv_label_set_text(ac_dc, "AC");
+                lv_label_set_text_static(ac_dc, "AC");
                 const char *fmt = "";
                 const char *k = result.khz ? "k" : "";
                 if (result.temp_freq < 9.9995f)
@@ -467,7 +451,7 @@ int main(void)
             }
             else
             {
-                lv_label_set_text(ac_dc, "");
+                lv_label_set_text_static(ac_dc, "");
             }
 
             lv_label_set_text(meas_main, result.main_s);
@@ -479,17 +463,5 @@ int main(void)
 
 void SysTick_Handler(void)
 {
-    static volatile uint_fast32_t uptime = 0;
-    if (++uptime > 1000)
-    {
-        /* power off */
-        //gpio_bits_write(GPIOB, GPIO_PINS_12, FALSE);
-    }
-
-    if ((uptime % 100) == 0)
-    {
-        //print("%u", uptime);
-    }
-
     lv_tick_inc(10);
 }
