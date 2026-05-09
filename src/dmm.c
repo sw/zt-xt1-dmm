@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,6 +14,18 @@
 static uint8_t rx_buf[32];
 static atomic_flag rx_empty = ATOMIC_FLAG_INIT;
 static volatile uint_fast8_t rx_len;
+
+static float stat[DMM_STAT_MAX_NB];
+static uint_fast8_t stat_nb;
+
+static void stat_reset(void)
+{
+    for (uint_fast8_t i = 0; i < DMM_STAT_MAX_NB; i++)
+    {
+        stat[i] = NAN;
+    }
+    stat_nb = 0;
+}
 
 void dmm_init(void)
 {
@@ -66,6 +79,8 @@ void dmm_init(void)
     tmr_counter_enable(TMR6, TRUE);
     tmr_interrupt_enable(TMR6, TMR_OVF_INT, FALSE);
     nvic_irq_enable(TMR6_GLOBAL_IRQn, 0xf, 0);
+
+    stat_reset();
 }
 
 void USART2_IRQHandler(void)
@@ -235,6 +250,30 @@ bool dmm_get(dmm_result_t *result)
     result->auto_range  = rx_copy[11] & 0x04;
     result->temperature = rx_copy[15] & 0x10;
 
+    if (stat_nb >= DMM_STAT_MAX_NB)
+    {
+        memmove(stat, &stat[1], sizeof(stat) - sizeof(stat[0]));
+        stat_nb--;
+    }
+    stat[stat_nb++] = result->main;
+
+    float stat_sum = 0;
+    result->stat_max = -26000.0f;
+    result->stat_min = +26000.0f;
+    for (uint_fast8_t i = 0; i < stat_nb; i++)
+    {
+        stat_sum += stat[i];
+        if (result->stat_max < stat[i])
+        {
+            result->stat_max = stat[i];
+        }
+        if (result->stat_min > stat[i])
+        {
+            result->stat_min = stat[i];
+        }
+    }
+    result->stat_avg = stat_sum / stat_nb;
+
     return true;
 }
 
@@ -244,6 +283,14 @@ void dmm_send(uint_fast8_t cmd)
     usart_data_transmit(USART2, cmd);
     while (!usart_flag_get(USART2, USART_TDBE_FLAG)) { }
     usart_data_transmit(USART2, cmd);
+
+    /* TODO: this probably needs to be smarter */
+    stat_nb = 0;
+}
+
+void dmm_stat_reset(void)
+{
+    stat_nb = 0;
 }
 
 void EXINT15_10_IRQHandler(void)

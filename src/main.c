@@ -1,4 +1,6 @@
+#include <math.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 #include "at32f403a_407_conf.h"
 
@@ -62,33 +64,6 @@ static void init_wdt(void)
     wdt_counter_reload();
     wdt_enable();
 }
-
-#if 0
-static void display_write_cmd(uint_fast8_t cmd)
-{
-    gpio_bits_write(GPIOA,GPIO_PINS_15,0);
-    gpio_bits_write(GPIOB,GPIO_PINS_4,0);
-    spi_i2s_data_transmit(SPI3, cmd);
-    while (spi_i2s_flag_get(SPI3,SPI_I2S_BF_FLAG)) { }
-    gpio_bits_write(GPIOB,GPIO_PINS_4,1);
-}
-
-static void display_write_byte(uint_fast8_t byte)
-{
-    spi_i2s_data_transmit(SPI3, byte);
-    while (spi_i2s_flag_get(SPI3,SPI_I2S_BF_FLAG)) { }
-}
-
-#define SLEEP_OUT 0x11
-#define MEMORY_DATA_ACCESS_CONTROL 0x36
-#define INTERFACE_PIXEL_FORMAT 0x3A
-#define PORCH_SETTING 0xB2
-#define LCM_CONTROL 0xC0
-#define VDV_VRH_COMMAND_ENABLE 0xC2
-#define GATE_CONTROL 0xB7
-#define VCOM_SETTING 0xBB
-#define VRH_SET 0xC4
-#endif
 
 static uint32_t systick_interrupt_config(uint32_t ticks)
 {
@@ -169,13 +144,11 @@ void key_event_cb(lv_event_t *e)
         {
             case KEY_POWER:
                 beep_short();
-                /* TODO: clear statistics */
-                // measurement_clear_cnt = 1;
+                dmm_stat_reset();
                 break;
 
             case KEY_UP:
                 beep_short();
-                //measurement_clear_cnt = 10;
                 switch (dmm_mode)
                 {
                     case 4:  dmm_send(0x80); dmm_mode = 5; break;
@@ -187,7 +160,6 @@ void key_event_cb(lv_event_t *e)
 
             case KEY_DOWN:
                 beep_short();
-                //measurement_clear_cnt = 10;
                 switch (dmm_mode)
                 {
                     case 0:  dmm_send(0x50); dmm_mode = 1; break;
@@ -212,7 +184,6 @@ void key_event_cb(lv_event_t *e)
                 break;
 
             case KEY_RETURN:
-                //measurement_clear_cnt = 10;
                 switch (dmm_mode)
                 {
                     case 8:
@@ -239,7 +210,7 @@ void key_event_cb(lv_event_t *e)
                         break;
 
                     case 13:
-                        //measurement_clear_cnt = 10;
+                        dmm_stat_reset();
                         break;
 
                     default:
@@ -292,6 +263,35 @@ static lv_obj_t *label_create_fixed(lv_obj_t *parent, const char *text)
     lv_obj_update_layout(label);
     lv_obj_set_width(label, lv_obj_get_width(label));
     return label;
+}
+
+static void measurement_format(float x, char dst[static 8])
+{
+    float xabs = fabsf(x);
+    if (xabs < 2.49995f)
+    {
+        sprintf(dst, "%0.4f", x);
+    }
+    else if (xabs < 24.9995f)
+    {
+        sprintf(dst, "%0.3f", x);
+    }
+    else if (xabs < 249.995f)
+    {
+        sprintf(dst, "%0.2f", x);
+    }
+    else if (xabs < 2499.95f)
+    {
+        sprintf(dst, "%0.1f", x);
+    }
+    else if (xabs < 24999.498f)
+    {
+        sprintf(dst, "%0.0f", x);
+    }
+    else
+    {
+        sprintf(dst, "------");
+    }
 }
 
 int main(void)
@@ -358,15 +358,29 @@ int main(void)
 
     lv_obj_t *meas_unit = label_create_fixed(meas_row, "MΩ");
 
-    obj = lv_label_create(rows);
-    lv_obj_set_width(obj, lv_pct(100));
-    lv_label_set_text_static(obj, "TODO: statistics");
 
-    obj = lv_label_create(rows);
-    lv_obj_set_width(obj, lv_pct(100));
-    lv_label_set_text_static(obj, "TODO: graph");
-    lv_obj_set_style_bg_color(obj, lv_color_make(0, 0x44, 0), 0); lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, 0);
-    lv_obj_set_flex_grow(obj, 1);
+    lv_obj_t *stat_row = lv_obj_create(rows);
+    lv_obj_set_size(stat_row, lv_pct(100), LV_SIZE_CONTENT);
+    lv_obj_set_flex_flow(stat_row, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(stat_row, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_START);
+
+    lv_obj_t *stat_max = label_create_fixed(stat_row, "Max:-2.4999");
+
+    lv_obj_t *stat_min = label_create_fixed(stat_row, "Min:-2.4999");
+
+    lv_obj_t *stat_avg = label_create_fixed(stat_row, "Avg:-2.4999");
+
+
+#if 0
+    lv_obj_t * chart = lv_chart_create(rows);
+    lv_obj_set_size(chart, lv_pct(100), lv_pct(100));
+    //lv_obj_set_flex_grow(obj, 1);
+    lv_chart_set_type(chart, LV_CHART_TYPE_LINE);
+    lv_chart_set_point_count(chart, DMM_STAT_MAX_NB);
+    lv_chart_set_axis_range(chart, LV_CHART_AXIS_PRIMARY_Y, 0, 1 << 16);
+    lv_chart_series_t *chart_ser = lv_chart_add_series(chart, lv_palette_main(LV_PALETTE_GREEN), LV_CHART_AXIS_PRIMARY_Y);
+    int32_t * chart_ser_y_points = lv_chart_get_series_y_array(chart, chart_ser);
+#endif
 
 
     lv_indev_t *indev = lv_indev_create();
@@ -456,6 +470,28 @@ int main(void)
 
             lv_label_set_text(meas_main, result.main_s);
             lv_label_set_text_fmt(meas_unit, "%s%s", result.prefix, result.unit);
+
+            char stat_s[8];
+            measurement_format(result.stat_max, stat_s);
+            lv_label_set_text_fmt(stat_max, "Max:%s", stat_s);
+            measurement_format(result.stat_min, stat_s);
+            lv_label_set_text_fmt(stat_min, "Min:%s", stat_s);
+            measurement_format(result.stat_avg, stat_s);
+            lv_label_set_text_fmt(stat_avg, "Avg:%s", stat_s);
+
+#if 0
+            uint_fast8_t i;
+            float scale = (1 << 16) / (result.stat_max - result.stat_min);
+            for (i = 0; i < result.stat_nb; i++)
+            {
+                chart_ser_y_points[i] = (result.stat_values[i] - result.stat_min) * scale;
+            }
+            for (; i < DMM_STAT_MAX_NB; i++)
+            {
+                chart_ser_y_points[i] = LV_CHART_POINT_NONE;
+            }
+            lv_chart_refresh(chart);
+#endif
         }
     }
     return 0;
