@@ -17,15 +17,7 @@ static volatile uint_fast8_t rx_len;
 
 static float stat[DMM_STAT_MAX_NB];
 static uint_fast8_t stat_nb;
-
-static void stat_reset(void)
-{
-    for (uint_fast8_t i = 0; i < DMM_STAT_MAX_NB; i++)
-    {
-        stat[i] = NAN;
-    }
-    stat_nb = 0;
-}
+static uint_fast8_t stat_skip;
 
 void dmm_init(void)
 {
@@ -80,7 +72,11 @@ void dmm_init(void)
     tmr_interrupt_enable(TMR6, TMR_OVF_INT, FALSE);
     nvic_irq_enable(TMR6_GLOBAL_IRQn, 0xf, 0);
 
-    stat_reset();
+    stat_nb = 0;
+    stat_skip = 1;
+
+    /* seems to enable DMM chip. TODO: find out what this is exactly */
+    gpio_bits_write(GPIOB,1,1);
 }
 
 void USART2_IRQHandler(void)
@@ -250,6 +246,16 @@ bool dmm_get(dmm_result_t *result)
     result->auto_range  = rx_copy[11] & 0x04;
     result->temperature = rx_copy[15] & 0x10;
 
+    if (stat_skip > 0)
+    {
+        stat_skip--;
+        result->stat_max = NAN;
+        result->stat_min = NAN;
+        result->stat_avg = NAN;
+        result->stat_nb = 0;
+        return true;
+    }
+
     if (stat_nb >= DMM_STAT_MAX_NB)
     {
         memmove(stat, &stat[1], sizeof(stat) - sizeof(stat[0]));
@@ -273,6 +279,7 @@ bool dmm_get(dmm_result_t *result)
         }
     }
     result->stat_avg = stat_sum / stat_nb;
+    result->stat_nb = stat_nb;
 
     return true;
 }
@@ -286,6 +293,7 @@ void dmm_send(uint_fast8_t cmd)
 
     /* TODO: this probably needs to be smarter */
     stat_nb = 0;
+    stat_skip = 1;
 }
 
 void dmm_stat_reset(void)

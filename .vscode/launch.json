@@ -12,6 +12,13 @@
             //"svdFile": "svd/N32G031.svd",
             "targetId": "_at32f403acgt7",
             "type": "cortex-debug"
+        },
+        {
+            "cwd": "${workspaceFolder}",
+            "name": "Launch Simulator",
+            "program": "${command:cmake.launchTargetPath}",
+            "request": "launch",
+            "type": "cppdbg"
         }
     ],
     "version": "0.2.0"

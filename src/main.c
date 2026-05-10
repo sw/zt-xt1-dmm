@@ -2,7 +2,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#ifdef AT32F403ACGT7
 #include "at32f403a_407_conf.h"
+#endif
 
 #include "lvgl.h"
 
@@ -11,6 +13,7 @@
 #include "display.h"
 #include "dmm.h"
 #include "lv_theme_zt.h"
+#ifdef AT32F403ACGT7
 #include "misc.h"
 
 static void init_crm(void)
@@ -79,6 +82,7 @@ static uint32_t systick_interrupt_config(uint32_t ticks)
                    SysTick_CTRL_ENABLE_Msk;
   return (0UL);
 }
+#endif
 
 typedef enum
 {
@@ -90,6 +94,7 @@ typedef enum
     KEY_DOWN = LV_KEY_DOWN, // LV_KEY_NEXT?
 } key_t;
 
+#ifdef AT32F403ACGT7
 static void keyboard_read(lv_indev_t *indev, lv_indev_data_t *data)
 {
     (void)indev;
@@ -128,6 +133,7 @@ static void keyboard_read(lv_indev_t *indev, lv_indev_data_t *data)
         data->state = LV_INDEV_STATE_RELEASED;
     }
 }
+#endif
 
 static int dmm_mode;
 static bool dmm_hold;
@@ -228,7 +234,9 @@ void key_event_cb(lv_event_t *e)
         {
             case KEY_POWER:
                 /* power off */
+#ifdef AT32F403ACGT7
                 gpio_bits_write(GPIOB, GPIO_PINS_12, FALSE);
+#endif
                 break;
 
             case KEY_UP:
@@ -296,23 +304,27 @@ static void measurement_format(float x, char dst[static 8])
 
 int main(void)
 {
+#ifdef AT32F403ACGT7
     nvic_priority_group_config(NVIC_PRIORITY_GROUP_4);
     nvic_vector_table_set(0x8000000, 0x6000);
 
     init_crm();
     init_gpio();
+    init_wdt();
+#endif
     beep_init();
     delay_init();
-    init_wdt();
 
+#ifdef AT32F403ACGT7
     /* only pull power high if power button has been pressed >1s */
     delay_ms(1000);
     gpio_bits_write(GPIOB, GPIO_PINS_12, TRUE);
 
-    lv_init();
-
     systick_clock_source_config(SYSTICK_CLOCK_SOURCE_AHBCLK_NODIV);
     systick_interrupt_config(system_core_clock / 100);
+#endif
+
+    lv_init();
 
     lv_display_t *lcd_disp = display_init();
     lv_theme_t *th = lv_theme_zt_init(lcd_disp);
@@ -336,9 +348,8 @@ int main(void)
 
     lv_obj_t *meas_freq = label_create_fixed(top_row, "0.000Hz");
 
-    lv_obj_t *obj;
-    obj = lv_label_create(top_row);
-    lv_label_set_text_static(obj, "BATT");
+    lv_obj_t *batt = lv_label_create(top_row);
+    lv_label_set_text_static(batt, "BATT"); /* TODO */
 
 
     lv_obj_t *meas_row = lv_obj_create(rows);
@@ -371,41 +382,70 @@ int main(void)
     lv_obj_t *stat_avg = label_create_fixed(stat_row, "Avg:-2.4999");
 
 
-#if 0
-    lv_obj_t * chart = lv_chart_create(rows);
-    lv_obj_set_size(chart, lv_pct(100), lv_pct(100));
-    //lv_obj_set_flex_grow(obj, 1);
+
+    lv_obj_t *chart_wrapper = lv_obj_create(rows);
+    //lv_obj_remove_style_all(wrapper);
+    lv_obj_set_width(chart_wrapper, lv_pct(100));
+    lv_obj_set_flex_grow(chart_wrapper, 1);
+    lv_obj_set_flex_flow(chart_wrapper, LV_FLEX_FLOW_ROW);
+
+    lv_obj_t *scale = lv_scale_create(chart_wrapper);
+    lv_scale_set_mode(scale, LV_SCALE_MODE_VERTICAL_LEFT);
+    lv_obj_set_size(scale, lv_pct(20), lv_pct(100));
+    lv_scale_set_total_tick_count(scale, 5);
+    lv_scale_set_label_show(scale, true);
+    //lv_scale_set_major_tick_every(scale, 1);
+    lv_scale_set_range(scale, 0, 1 << 16);
+
+    lv_obj_t *chart = lv_chart_create(chart_wrapper);
+    //lv_obj_set_height(chart, lv_pct(100));
+    //lv_obj_set_flex_grow(chart, 1);
+    lv_obj_set_size(chart, lv_pct(80), lv_pct(100));
     lv_chart_set_type(chart, LV_CHART_TYPE_LINE);
     lv_chart_set_point_count(chart, DMM_STAT_MAX_NB);
+    lv_chart_set_div_line_count(chart, 5, 7);
     lv_chart_set_axis_range(chart, LV_CHART_AXIS_PRIMARY_Y, 0, 1 << 16);
     lv_chart_series_t *chart_ser = lv_chart_add_series(chart, lv_palette_main(LV_PALETTE_GREEN), LV_CHART_AXIS_PRIMARY_Y);
-    int32_t * chart_ser_y_points = lv_chart_get_series_y_array(chart, chart_ser);
+    int32_t *chart_ser_y_points = lv_chart_get_series_y_array(chart, chart_ser);
+
+    //lv_obj_set_style_pad_ver(scale, lv_chart_get_first_point_center_offset(chart), 0);
+
+#ifdef AT32F403ACGT7
+    /* wait for power button to be released before setting up LVGL keypad handling */
+    while (!gpio_input_data_bit_read(GPIOA, GPIO_PINS_1))
+    {
+        wdt_counter_reload();
+    }
 #endif
 
-
+#ifdef AT32F403ACGT7
     lv_indev_t *indev = lv_indev_create();
     lv_indev_set_type(indev, LV_INDEV_TYPE_KEYPAD);
     lv_indev_set_read_cb(indev, keyboard_read);
+#else
+    lv_indev_t *indev = lv_sdl_keyboard_create();
+#endif
     lv_indev_add_event_cb(indev, key_event_cb, LV_EVENT_SHORT_CLICKED, NULL);
     lv_indev_add_event_cb(indev, key_event_cb, LV_EVENT_LONG_PRESSED, NULL);
 
     dmm_init();
 
-    /* seems to enable DMM chip. TODO: find out what this is exactly */
-    gpio_bits_write(GPIOB,1,1);
-
     beep_short();
 
     while (true)
     {
+#ifdef AT32F403ACGT7
         wdt_counter_reload();
+#endif
         lv_timer_handler();
         delay_ms(20);
 
         dmm_result_t result;
         if (dmm_get(&result))
         {
+#ifdef AT32F403ACGT7
             exint_interrupt_enable(EXINT_LINE_13, result.continuity);
+#endif
 
             if (dmm_hold)
             {
@@ -479,12 +519,16 @@ int main(void)
             measurement_format(result.stat_avg, stat_s);
             lv_label_set_text_fmt(stat_avg, "Avg:%s", stat_s);
 
-#if 0
-            uint_fast8_t i;
-            float scale = (1 << 16) / (result.stat_max - result.stat_min);
-            for (i = 0; i < result.stat_nb; i++)
+#if 1
+            uint_fast8_t i = 0;
+            if ((result.stat_nb > 1) && (result.stat_max != result.stat_min))
             {
-                chart_ser_y_points[i] = (result.stat_values[i] - result.stat_min) * scale;
+                //float scale = (1 << 16) / (result.stat_max - result.stat_min);
+                for (; i < result.stat_nb; i++)
+                {
+                    //chart_ser_y_points[i] = (result.stat_values[i] - result.stat_min) * scale;
+                    chart_ser_y_points[i] = ((int32_t)i) << 12;
+                }
             }
             for (; i < DMM_STAT_MAX_NB; i++)
             {

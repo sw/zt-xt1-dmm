@@ -37,7 +37,7 @@ typedef struct {
     lv_style_t scr;
     lv_style_t invisible;
     //lv_style_t transp;
-    //lv_style_t white;
+    lv_style_t white;
     //lv_style_t light;
     //lv_style_t dark;
     //lv_style_t dim;
@@ -95,11 +95,11 @@ static void style_init(my_theme_t * theme)
     //style_init_reset(&theme->styles.transp);
     //lv_style_set_bg_opa(&theme->styles.transp, LV_OPA_TRANSP);
 
-    //style_init_reset(&theme->styles.white);
+    style_init_reset(&theme->styles.white);
     //lv_style_set_bg_opa(&theme->styles.white, LV_OPA_COVER);
     //lv_style_set_bg_color(&theme->styles.white, COLOR_WHITE);
-    //lv_style_set_line_width(&theme->styles.white, 1);
-    //lv_style_set_line_color(&theme->styles.white, COLOR_WHITE);
+    lv_style_set_line_width(&theme->styles.white, 1);
+    lv_style_set_line_color(&theme->styles.white, COLOR_WHITE);
     //lv_style_set_arc_width(&theme->styles.white, 2);
     //lv_style_set_arc_color(&theme->styles.white, COLOR_WHITE);
 
@@ -334,9 +334,9 @@ static void theme_apply(lv_theme_t * th, lv_obj_t * obj)
 #if LV_USE_CHART
     else if(lv_obj_check_type(obj, &lv_chart_class)) {
         lv_obj_add_style(obj, &theme->styles.white, 0);
-        lv_obj_add_style(obj, &theme->styles.scrollbar, LV_PART_SCROLLBAR);
-        lv_obj_add_style(obj, &theme->styles.light, LV_PART_ITEMS);
-        lv_obj_add_style(obj, &theme->styles.dark, LV_PART_CURSOR);
+        //lv_obj_add_style(obj, &theme->styles.scrollbar, LV_PART_SCROLLBAR);
+        //lv_obj_add_style(obj, &theme->styles.light, LV_PART_ITEMS);
+        //lv_obj_add_style(obj, &theme->styles.dark, LV_PART_CURSOR);
     }
 #endif
 

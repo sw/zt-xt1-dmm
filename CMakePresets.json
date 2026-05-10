@@ -1,6 +1,11 @@
 {
     "buildPresets": [
         {
+            "configurePreset": "Simulator",
+            "displayName": "Simulator",
+            "name": "Simulator"
+        },
+        {
             "configurePreset": "Debug",
             "displayName": "Debug",
             "name": "Debug"
@@ -17,8 +22,15 @@
             "cacheVariables": {},
             "generator": "Ninja",
             "hidden": true,
-            "name": "default",
-            "toolchainFile": "${sourceDir}/cmake/toolchains/gcc-arm-none-eabi.cmake"
+            "name": "default"
+        },
+        {
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Simulator"
+            },
+            "displayName": "Simulator",
+            "inherits": "default",
+            "name": "Simulator"
         },
         {
             "cacheVariables": {
@@ -26,7 +38,8 @@
             },
             "displayName": "Debug",
             "inherits": "default",
-            "name": "Debug"
+            "name": "Debug",
+            "toolchainFile": "${sourceDir}/cmake/toolchains/gcc-arm-none-eabi.cmake"
         },
         {
             "cacheVariables": {
@@ -34,7 +47,8 @@
             },
             "displayName": "Release (with debug info)",
             "inherits": "default",
-            "name": "RelWithDebInfo"
+            "name": "RelWithDebInfo",
+            "toolchainFile": "${sourceDir}/cmake/toolchains/gcc-arm-none-eabi.cmake"
         }
     ],
     "version": 3
