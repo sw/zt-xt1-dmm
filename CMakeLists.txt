@@ -47,6 +47,7 @@ set(SOURCES_C
     ${PROJECT_SOURCE_DIR}/src/delay.c
     ${PROJECT_SOURCE_DIR}/src/display.c
     ${PROJECT_SOURCE_DIR}/src/dmm.c
+    ${PROJECT_SOURCE_DIR}/src/fault.c
     ${PROJECT_SOURCE_DIR}/src/lv_theme_zt.c
     ${PROJECT_SOURCE_DIR}/src/main.c
     ${PROJECT_SOURCE_DIR}/src/misc.c
