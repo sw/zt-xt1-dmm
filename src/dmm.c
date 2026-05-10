@@ -72,7 +72,6 @@ void dmm_init(void)
     tmr_interrupt_enable(TMR6, TMR_OVF_INT, FALSE);
     nvic_irq_enable(TMR6_GLOBAL_IRQn, 0xf, 0);
 
-    stat_nb = 0;
     stat_skip = 1;
 
     /* seems to enable DMM chip. TODO: find out what this is exactly */
@@ -140,6 +139,21 @@ bool dmm_get(dmm_result_t *result)
     dma_data_number_set(DMA1_CHANNEL6, sizeof(rx_buf));
     dma_channel_enable(DMA1_CHANNEL6, TRUE);
 
+    memset(result, 0, sizeof(*result));
+    result->main = NAN;
+    result->unit = "";
+    result->prefix = "";
+    result->stat_max = NAN;
+    result->stat_min = NAN;
+    result->stat_avg = NAN;
+
+    if (stat_skip > 0)
+    {
+        stat_skip--;
+        stat_nb = 0;
+        return true;
+    }
+
     char digits[8] = { 0 };
     size_t d = 0;
 
@@ -190,10 +204,14 @@ bool dmm_get(dmm_result_t *result)
     result->main_s[d++] = dmm_7seg_to_ascii(rx_copy[1] & 0xef);
     result->main_s[d++] = '\0';
     assert(d < sizeof(result->main_s));
-    result->main = strtof(result->main_s, NULL);
+    char *end;
+    result->main = strtof(result->main_s, &end);
+    if (   (strlen(result->main_s) == 0)
+        || (end - result->main_s == 0) )
+    {
+        result->main = NAN;
+    }
 
-    result->unit = "";
-    result->prefix = "";
     if (rx_copy[16] & 0b01000000)
     {
         result->unit = "Ω";
@@ -246,22 +264,15 @@ bool dmm_get(dmm_result_t *result)
     result->auto_range  = rx_copy[11] & 0x04;
     result->temperature = rx_copy[15] & 0x10;
 
-    if (stat_skip > 0)
+    if (!isnanf(result->main))
     {
-        stat_skip--;
-        result->stat_max = NAN;
-        result->stat_min = NAN;
-        result->stat_avg = NAN;
-        result->stat_nb = 0;
-        return true;
+        if (stat_nb >= DMM_STAT_MAX_NB)
+        {
+            memmove(stat, &stat[1], sizeof(stat) - sizeof(stat[0]));
+            stat_nb--;
+        }
+        stat[stat_nb++] = result->main;
     }
-
-    if (stat_nb >= DMM_STAT_MAX_NB)
-    {
-        memmove(stat, &stat[1], sizeof(stat) - sizeof(stat[0]));
-        stat_nb--;
-    }
-    stat[stat_nb++] = result->main;
 
     float stat_sum = 0;
     result->stat_max = -26000.0f;
@@ -279,6 +290,7 @@ bool dmm_get(dmm_result_t *result)
         }
     }
     result->stat_avg = stat_sum / stat_nb;
+    result->stat_values = stat;
     result->stat_nb = stat_nb;
 
     return true;
@@ -292,13 +304,12 @@ void dmm_send(uint_fast8_t cmd)
     usart_data_transmit(USART2, cmd);
 
     /* TODO: this probably needs to be smarter */
-    stat_nb = 0;
     stat_skip = 1;
 }
 
 void dmm_stat_reset(void)
 {
-    stat_nb = 0;
+    stat_skip = 1;
 }
 
 void EXINT15_10_IRQHandler(void)

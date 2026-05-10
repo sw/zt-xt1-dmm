@@ -1,14 +1,12 @@
 # Set debug flags (Debug build type)
 set(DEBUG_FLAGS
     "-Og"
-    "-g"
 )
 
 # Set flags for release with debug info but no debug (output) code or asserts
 # (RelWithDebInfo build type)
 set(RELWITHDEBINFO_FLAGS
     "-Os"
-    "-g"
 )
 
 # For all build types:

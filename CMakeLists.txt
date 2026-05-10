@@ -31,6 +31,7 @@ set(SOURCES_C
     ${PROJECT_SOURCE_DIR}/src/noto_sans_semibold_64.c
 )
 
+add_compile_options(-g)
 # Specify target executable
 add_executable(${CMAKE_PROJECT_NAME})
 

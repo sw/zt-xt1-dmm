@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define DMM_STAT_MAX_NB 8
+#define DMM_STAT_MAX_NB 250
 
 typedef struct
 {

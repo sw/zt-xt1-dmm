@@ -382,33 +382,31 @@ int main(void)
     lv_obj_t *stat_avg = label_create_fixed(stat_row, "Avg:-2.4999");
 
 
+    #define CHART_Y_DIVISION 5
+    #define CHART_Y_SCALE (1 << 16)
 
     lv_obj_t *chart_wrapper = lv_obj_create(rows);
-    //lv_obj_remove_style_all(wrapper);
     lv_obj_set_width(chart_wrapper, lv_pct(100));
     lv_obj_set_flex_grow(chart_wrapper, 1);
     lv_obj_set_flex_flow(chart_wrapper, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(chart_wrapper, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER);
 
     lv_obj_t *scale = lv_scale_create(chart_wrapper);
     lv_scale_set_mode(scale, LV_SCALE_MODE_VERTICAL_LEFT);
-    lv_obj_set_size(scale, lv_pct(20), lv_pct(100));
-    lv_scale_set_total_tick_count(scale, 5);
+    lv_obj_set_size(scale, lv_pct(19), lv_pct(90));
+    lv_scale_set_total_tick_count(scale, CHART_Y_DIVISION);
     lv_scale_set_label_show(scale, true);
-    //lv_scale_set_major_tick_every(scale, 1);
-    lv_scale_set_range(scale, 0, 1 << 16);
+    lv_scale_set_major_tick_every(scale, 1);
+    lv_scale_set_range(scale, 0, CHART_Y_SCALE);
 
     lv_obj_t *chart = lv_chart_create(chart_wrapper);
-    //lv_obj_set_height(chart, lv_pct(100));
-    //lv_obj_set_flex_grow(chart, 1);
-    lv_obj_set_size(chart, lv_pct(80), lv_pct(100));
+    lv_obj_set_size(chart, lv_pct(81), lv_pct(90));
     lv_chart_set_type(chart, LV_CHART_TYPE_LINE);
     lv_chart_set_point_count(chart, DMM_STAT_MAX_NB);
-    lv_chart_set_div_line_count(chart, 5, 7);
-    lv_chart_set_axis_range(chart, LV_CHART_AXIS_PRIMARY_Y, 0, 1 << 16);
+    lv_chart_set_div_line_count(chart, CHART_Y_DIVISION, 7);
+    lv_chart_set_axis_range(chart, LV_CHART_AXIS_PRIMARY_Y, 0, CHART_Y_SCALE);
     lv_chart_series_t *chart_ser = lv_chart_add_series(chart, lv_palette_main(LV_PALETTE_GREEN), LV_CHART_AXIS_PRIMARY_Y);
     int32_t *chart_ser_y_points = lv_chart_get_series_y_array(chart, chart_ser);
-
-    //lv_obj_set_style_pad_ver(scale, lv_chart_get_first_point_center_offset(chart), 0);
 
 #ifdef AT32F403ACGT7
     /* wait for power button to be released before setting up LVGL keypad handling */
@@ -519,15 +517,13 @@ int main(void)
             measurement_format(result.stat_avg, stat_s);
             lv_label_set_text_fmt(stat_avg, "Avg:%s", stat_s);
 
-#if 1
             uint_fast8_t i = 0;
             if ((result.stat_nb > 1) && (result.stat_max != result.stat_min))
             {
-                //float scale = (1 << 16) / (result.stat_max - result.stat_min);
+                float scale = CHART_Y_SCALE / (result.stat_max - result.stat_min);
                 for (; i < result.stat_nb; i++)
                 {
-                    //chart_ser_y_points[i] = (result.stat_values[i] - result.stat_min) * scale;
-                    chart_ser_y_points[i] = ((int32_t)i) << 12;
+                    chart_ser_y_points[i] = (result.stat_values[i] - result.stat_min) * scale;
                 }
             }
             for (; i < DMM_STAT_MAX_NB; i++)
@@ -535,7 +531,15 @@ int main(void)
                 chart_ser_y_points[i] = LV_CHART_POINT_NONE;
             }
             lv_chart_refresh(chart);
-#endif
+
+            static char scale_label[CHART_Y_DIVISION][8];
+            static const char *scale_label_p[CHART_Y_DIVISION + 1] = { NULL };
+            for (i = 0; i < CHART_Y_DIVISION; i++)
+            {
+                measurement_format(result.stat_min + (result.stat_max - result.stat_min) * i / (CHART_Y_DIVISION - 1), scale_label[i]);
+                scale_label_p[i] = scale_label[i];
+            }
+            lv_scale_set_text_src(scale, scale_label_p);
         }
     }
     return 0;

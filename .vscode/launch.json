@@ -4,7 +4,7 @@
             "cwd": "${workspaceFolder}",
             "executable": "${command:cmake.launchTargetPath}",
             "interface": "swd",
-            "name": "Launch PyOCD",
+            "name": "Launch Target (PyOCD)",
             "request": "launch",
             "runToEntryPoint": "main",
             "servertype": "pyocd",
@@ -14,11 +14,10 @@
             "type": "cortex-debug"
         },
         {
-            "cwd": "${workspaceFolder}",
-            "name": "Launch Simulator",
+            "name": "Launch Simulator (LLDB)",
             "program": "${command:cmake.launchTargetPath}",
             "request": "launch",
-            "type": "cppdbg"
+            "type": "lldb"
         }
     ],
     "version": "0.2.0"

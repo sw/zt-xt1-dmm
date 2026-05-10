@@ -39,7 +39,7 @@ typedef struct {
     //lv_style_t transp;
     lv_style_t white;
     //lv_style_t light;
-    //lv_style_t dark;
+    lv_style_t dark;
     //lv_style_t dim;
     //lv_style_t scrollbar;
 #if LV_USE_ARC
@@ -111,11 +111,11 @@ static void style_init(my_theme_t * theme)
     //lv_style_set_arc_width(&theme->styles.light, 2);
     //lv_style_set_arc_color(&theme->styles.light, COLOR_LIGHT);
 
-    //style_init_reset(&theme->styles.dark);
+    style_init_reset(&theme->styles.dark);
     //lv_style_set_bg_opa(&theme->styles.dark, LV_OPA_COVER);
     //lv_style_set_bg_color(&theme->styles.dark, COLOR_DARK);
-    //lv_style_set_line_width(&theme->styles.dark, 1);
-    //lv_style_set_line_color(&theme->styles.dark, COLOR_DARK);
+    lv_style_set_line_width(&theme->styles.dark, 1);
+    lv_style_set_line_color(&theme->styles.dark, COLOR_DARK);
     //lv_style_set_arc_width(&theme->styles.dark, 2);
     //lv_style_set_arc_color(&theme->styles.dark, COLOR_DARK);
 
@@ -333,10 +333,16 @@ static void theme_apply(lv_theme_t * th, lv_obj_t * obj)
 
 #if LV_USE_CHART
     else if(lv_obj_check_type(obj, &lv_chart_class)) {
-        lv_obj_add_style(obj, &theme->styles.white, 0);
+        lv_obj_add_style(obj, &theme->styles.dark, 0);
         //lv_obj_add_style(obj, &theme->styles.scrollbar, LV_PART_SCROLLBAR);
-        //lv_obj_add_style(obj, &theme->styles.light, LV_PART_ITEMS);
+        lv_obj_add_style(obj, &theme->styles.dark, LV_PART_ITEMS);
         //lv_obj_add_style(obj, &theme->styles.dark, LV_PART_CURSOR);
+    }
+#endif
+
+#if LV_USE_SCALE
+    else if(lv_obj_check_type(obj, &lv_scale_class)) {
+        lv_obj_add_style(obj, &theme->styles.white, LV_PART_INDICATOR);
     }
 #endif
 
