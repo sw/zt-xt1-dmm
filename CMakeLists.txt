@@ -52,6 +52,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Simulator")
         ${PROJECT_SOURCE_DIR}/src/delay_sim.c
         ${PROJECT_SOURCE_DIR}/src/display_sim.c
         ${PROJECT_SOURCE_DIR}/src/dmm_sim.c
+        ${PROJECT_SOURCE_DIR}/src/keypad_sim.c
     )
 
     target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${SDL2_LIBRARIES})
@@ -80,6 +81,7 @@ else()
         ${PROJECT_SOURCE_DIR}/src/display.c
         ${PROJECT_SOURCE_DIR}/src/dmm.c
         ${PROJECT_SOURCE_DIR}/src/fault.c
+        ${PROJECT_SOURCE_DIR}/src/keypad.c
         ${PROJECT_SOURCE_DIR}/src/misc.c
     )
 

@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdio.h>
 
 #include "dmm.h"
 
@@ -35,6 +36,7 @@ bool dmm_get(dmm_result_t *result)
 
 void dmm_send(uint_fast8_t cmd)
 {
+    printf("%s(%x)\n", __FUNCTION__, cmd);
 }
 
 void dmm_stat_reset(void)

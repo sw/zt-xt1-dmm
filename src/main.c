@@ -12,6 +12,7 @@
 #include "delay.h"
 #include "display.h"
 #include "dmm.h"
+#include "keypad.h"
 #include "lv_theme_zt.h"
 #ifdef AT32F403ACGT7
 #include "misc.h"
@@ -49,14 +50,6 @@ static void init_gpio(void)
     gpio_init_simple(GPIOB, GPIO_PINS_12, GPIO_MODE_OUTPUT, GPIO_PULL_NONE);
     gpio_init_simple(GPIOB, GPIO_PINS_0, GPIO_MODE_OUTPUT, GPIO_PULL_NONE);
     gpio_init_simple(GPIOB, GPIO_PINS_1, GPIO_MODE_OUTPUT, GPIO_PULL_NONE);
-
-    /* keypad */
-    gpio_init_simple(GPIOA, GPIO_PINS_1,  GPIO_MODE_INPUT, GPIO_PULL_UP);
-    gpio_init_simple(GPIOC, GPIO_PINS_13, GPIO_MODE_INPUT, GPIO_PULL_UP);
-    gpio_init_simple(GPIOC, GPIO_PINS_14, GPIO_MODE_INPUT, GPIO_PULL_UP);
-    gpio_init_simple(GPIOA, GPIO_PINS_8,  GPIO_MODE_INPUT, GPIO_PULL_UP);
-    gpio_init_simple(GPIOA, GPIO_PINS_10, GPIO_MODE_INPUT, GPIO_PULL_UP);
-    gpio_init_simple(GPIOC, GPIO_PINS_15, GPIO_MODE_INPUT, GPIO_PULL_DOWN);
 }
 
 static void init_wdt(void)
@@ -84,76 +77,25 @@ static uint32_t systick_interrupt_config(uint32_t ticks)
 }
 #endif
 
-typedef enum
-{
-    KEY_POWER,
-    KEY_RETURN,
-    KEY_RANGE_REL,
-    KEY_OK_MENU_HOLD,
-    KEY_UP   = LV_KEY_UP,   // LV_KEY_PREV?
-    KEY_DOWN = LV_KEY_DOWN, // LV_KEY_NEXT?
-} key_t;
-
-#ifdef AT32F403ACGT7
-static void keyboard_read(lv_indev_t *indev, lv_indev_data_t *data)
-{
-    (void)indev;
-    if (!gpio_input_data_bit_read(GPIOA, GPIO_PINS_1))
-    {
-        data->key = KEY_POWER;
-        data->state = LV_INDEV_STATE_PRESSED;
-    }
-    else if (!gpio_input_data_bit_read(GPIOC, GPIO_PINS_13))
-    {
-        data->key = KEY_UP;
-        data->state = LV_INDEV_STATE_PRESSED;
-    }
-    else if (!gpio_input_data_bit_read(GPIOC, GPIO_PINS_14))
-    {
-        data->key = KEY_DOWN;
-        data->state = LV_INDEV_STATE_PRESSED;
-    }
-    else if (!gpio_input_data_bit_read(GPIOA, GPIO_PINS_8))
-    {
-        data->key = KEY_RETURN;
-        data->state = LV_INDEV_STATE_PRESSED;
-    }
-    else if (!gpio_input_data_bit_read(GPIOA, GPIO_PINS_10))
-    {
-        data->key = KEY_RANGE_REL;
-        data->state = LV_INDEV_STATE_PRESSED;
-    }
-    else if (!!gpio_input_data_bit_read(GPIOC, GPIO_PINS_15))
-    {
-        data->key = KEY_OK_MENU_HOLD;
-        data->state = LV_INDEV_STATE_PRESSED;
-    }
-    else
-    {
-        data->state = LV_INDEV_STATE_RELEASED;
-    }
-}
-#endif
-
 static int dmm_mode;
 static bool dmm_hold;
 
 void key_event_cb(lv_event_t *e)
 {
     lv_indev_t *indev = (lv_indev_t *)lv_event_get_target(e);
-    key_t key = lv_indev_get_key(indev);
+    keypad_t key = lv_indev_get_key(indev);
     lv_event_code_t code = lv_event_get_code(e);
 
     if (code == LV_EVENT_SHORT_CLICKED)
     {
         switch (key)
         {
-            case KEY_POWER:
+            case KEYPAD_POWER:
                 beep_short();
                 dmm_stat_reset();
                 break;
 
-            case KEY_UP:
+            case KEYPAD_UP:
                 beep_short();
                 switch (dmm_mode)
                 {
@@ -164,7 +106,7 @@ void key_event_cb(lv_event_t *e)
                 }
                 break;
 
-            case KEY_DOWN:
+            case KEYPAD_DOWN:
                 beep_short();
                 switch (dmm_mode)
                 {
@@ -175,7 +117,7 @@ void key_event_cb(lv_event_t *e)
                 }
                 break;
 
-            case KEY_OK_MENU_HOLD:
+            case KEYPAD_OK_MENU_HOLD:
                 if (dmm_mode != 9)
                 {
                     beep_short();
@@ -184,12 +126,12 @@ void key_event_cb(lv_event_t *e)
                 dmm_send(0x10);
                 break;
 
-            case KEY_RANGE_REL:
+            case KEYPAD_RANGE_REL:
                 beep_short();
                 dmm_send(0x20);
                 break;
 
-            case KEY_RETURN:
+            case KEYPAD_RETURN:
                 switch (dmm_mode)
                 {
                     case 8:
@@ -232,33 +174,33 @@ void key_event_cb(lv_event_t *e)
     {
         switch (key)
         {
-            case KEY_POWER:
+            case KEYPAD_POWER:
                 /* power off */
 #ifdef AT32F403ACGT7
                 gpio_bits_write(GPIOB, GPIO_PINS_12, FALSE);
 #endif
                 break;
 
-            case KEY_UP:
+            case KEYPAD_UP:
                 beep_short();
                 //tmr_counter_enable(TMR5, 1);
                 //tester_enter();
                 break;
 
-            case KEY_RANGE_REL:
+            case KEYPAD_RANGE_REL:
                 beep_short();
                 dmm_send(0x30);
                 break;
 
-            case KEY_OK_MENU_HOLD:
+            case KEYPAD_OK_MENU_HOLD:
                 beep_short();
                 //tmr_counter_enable(&TMR5,1);
                 //DAT_200003fc = 3;
                 //setup_draw();
                 break;
 
-            case KEY_RETURN:
-            case KEY_DOWN:
+            case KEYPAD_RETURN:
+            case KEYPAD_DOWN:
                 break;
         }
     }
@@ -312,6 +254,7 @@ int main(void)
     init_gpio();
     init_wdt();
 #endif
+    keypad_init();
     beep_init();
     delay_init();
 
@@ -416,13 +359,9 @@ int main(void)
     }
 #endif
 
-#ifdef AT32F403ACGT7
     lv_indev_t *indev = lv_indev_create();
     lv_indev_set_type(indev, LV_INDEV_TYPE_KEYPAD);
-    lv_indev_set_read_cb(indev, keyboard_read);
-#else
-    lv_indev_t *indev = lv_sdl_keyboard_create();
-#endif
+    lv_indev_set_read_cb(indev, keypad_read);
     lv_indev_add_event_cb(indev, key_event_cb, LV_EVENT_SHORT_CLICKED, NULL);
     lv_indev_add_event_cb(indev, key_event_cb, LV_EVENT_LONG_PRESSED, NULL);
 
