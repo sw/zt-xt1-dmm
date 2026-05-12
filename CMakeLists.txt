@@ -25,6 +25,11 @@ set(INCLUDES
 
 # Set source files
 set(SOURCES_C
+    ${PROJECT_SOURCE_DIR}/src/img/bjt_npn.c
+    ${PROJECT_SOURCE_DIR}/src/img/bjt_pnp.c
+    ${PROJECT_SOURCE_DIR}/src/img/probe1.c
+    ${PROJECT_SOURCE_DIR}/src/img/probe2.c
+    ${PROJECT_SOURCE_DIR}/src/img/probe3.c
     ${PROJECT_SOURCE_DIR}/src/lv_theme_zt.c
     ${PROJECT_SOURCE_DIR}/src/main.c
     ${PROJECT_SOURCE_DIR}/src/noto_sans_regular_16.c
@@ -56,6 +61,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Simulator")
         ${PROJECT_SOURCE_DIR}/src/dmm_sim.c
         ${PROJECT_SOURCE_DIR}/src/keypad_sim.c
         ${PROJECT_SOURCE_DIR}/src/power_sim.c
+        ${PROJECT_SOURCE_DIR}/src/tester_sim.c
     )
 
     target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${SDL2_LIBRARIES})
@@ -87,6 +93,7 @@ else()
         ${PROJECT_SOURCE_DIR}/src/keypad.c
         ${PROJECT_SOURCE_DIR}/src/misc.c
         ${PROJECT_SOURCE_DIR}/src/power.c
+        ${PROJECT_SOURCE_DIR}/src/tester.c
     )
 
     # Specify libraries to link

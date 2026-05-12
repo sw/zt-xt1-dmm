@@ -10,7 +10,6 @@
 #include "beep.h"
 #include "delay.h"
 #include "display.h"
-#include "dmm.h"
 #include "keypad.h"
 #include "lv_theme_zt.h"
 #include "power.h"
@@ -145,8 +144,6 @@ int main(void)
     lv_indev_set_read_cb(indev, keypad_read);
     lv_indev_add_event_cb(indev, key_event_cb, LV_EVENT_SHORT_CLICKED, NULL);
     lv_indev_add_event_cb(indev, key_event_cb, LV_EVENT_LONG_PRESSED, NULL);
-
-    dmm_init();
 
     beep_short();
 

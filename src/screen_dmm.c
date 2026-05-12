@@ -74,6 +74,7 @@ static void measurement_format(float x, char dst[static 8])
 
 static void screen_dmm_enter(void)
 {
+    dmm_init();
 }
 
 static lv_obj_t *screen_dmm_handle_key(lv_event_code_t event_code, keypad_t key)
