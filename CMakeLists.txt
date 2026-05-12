@@ -29,6 +29,7 @@ set(SOURCES_C
     ${PROJECT_SOURCE_DIR}/src/main.c
     ${PROJECT_SOURCE_DIR}/src/noto_sans_regular_16.c
     ${PROJECT_SOURCE_DIR}/src/noto_sans_semibold_64.c
+    ${PROJECT_SOURCE_DIR}/src/screen_dmm.c
 )
 
 add_compile_options(-g)
@@ -53,6 +54,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Simulator")
         ${PROJECT_SOURCE_DIR}/src/display_sim.c
         ${PROJECT_SOURCE_DIR}/src/dmm_sim.c
         ${PROJECT_SOURCE_DIR}/src/keypad_sim.c
+        ${PROJECT_SOURCE_DIR}/src/power_sim.c
     )
 
     target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${SDL2_LIBRARIES})
@@ -83,6 +85,7 @@ else()
         ${PROJECT_SOURCE_DIR}/src/fault.c
         ${PROJECT_SOURCE_DIR}/src/keypad.c
         ${PROJECT_SOURCE_DIR}/src/misc.c
+        ${PROJECT_SOURCE_DIR}/src/power.c
     )
 
     # Specify libraries to link

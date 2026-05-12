@@ -2,6 +2,7 @@
 #include "at32f403a_407_wdt.h"
 
 #include "display.h"
+#include "power.h"
 
 static void fault_block(void)
 {
@@ -17,8 +18,7 @@ static void fault_block(void)
         wdt_counter_reload();
     }
 
-    /* power off */
-    gpio_bits_write(GPIOB, GPIO_PINS_12, FALSE);
+    power_set(false);
 }
 
 void hard_fault(uint32_t *stack_frame, uint32_t exc)
