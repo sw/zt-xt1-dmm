@@ -30,6 +30,7 @@ set(SOURCES_C
     ${PROJECT_SOURCE_DIR}/src/noto_sans_regular_16.c
     ${PROJECT_SOURCE_DIR}/src/noto_sans_semibold_64.c
     ${PROJECT_SOURCE_DIR}/src/screen_dmm.c
+    ${PROJECT_SOURCE_DIR}/src/screen_tester.c
 )
 
 add_compile_options(-g)

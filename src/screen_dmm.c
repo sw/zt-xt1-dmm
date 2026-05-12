@@ -8,7 +8,12 @@
 #include "beep.h"
 #include "dmm.h"
 #include "power.h"
-#include "screen_dmm.h"
+#include "screen.h"
+
+#define CHART_Y_DIVISION 5
+#define CHART_Y_SCALE (1 << 16)
+
+lv_obj_t *screen_dmm;
 
 static int dmm_mode;
 static bool dmm_hold;
@@ -67,92 +72,11 @@ static void measurement_format(float x, char dst[static 8])
     }
 }
 
-lv_obj_t *screen_dmm_create(void)
+static void screen_dmm_enter(void)
 {
-    lv_obj_t *scr = lv_obj_create(NULL);
-
-    lv_obj_t *rows = lv_obj_create(scr);
-    lv_obj_set_size(rows, lv_pct(100), lv_pct(100));
-    lv_obj_set_flex_flow(rows, LV_FLEX_FLOW_COLUMN);
-
-
-    lv_obj_t *top_row = lv_obj_create(rows);
-    lv_obj_set_size(top_row, lv_pct(100), LV_SIZE_CONTENT);
-    lv_obj_set_flex_flow(top_row, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(top_row, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
-
-    hold = label_create_fixed(top_row, "HOLD");
-    lv_obj_set_style_text_color(hold, lv_color_make(0xff, 0, 0), 0);
-
-    auto_rel = label_create_fixed(top_row, "AUTO");
-
-    meas_freq = label_create_fixed(top_row, "0.000Hz");
-
-    lv_obj_t *batt = lv_label_create(top_row);
-    lv_label_set_text_static(batt, "BATT"); /* TODO */
-
-
-    lv_obj_t *meas_row = lv_obj_create(rows);
-    lv_obj_set_size(meas_row, lv_pct(100), LV_SIZE_CONTENT);
-    lv_obj_set_flex_flow(meas_row, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(meas_row, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_START);
-
-    ac_dc = label_create_fixed(meas_row, "DC");
-    lv_obj_set_height(ac_dc, lv_pct(100));
-
-    meas_main = lv_label_create(meas_row);
-    lv_obj_set_style_text_font(meas_main, &noto_sans_semibold_64, 0);
-    lv_label_set_text_static(meas_main, "-2.4999");
-    lv_obj_update_layout(meas_main);
-    lv_obj_set_width(meas_main, lv_obj_get_width(meas_main));
-    lv_obj_set_style_text_align(meas_main, LV_TEXT_ALIGN_RIGHT, 0);
-
-    meas_unit = label_create_fixed(meas_row, "MΩ");
-
-
-    lv_obj_t *stat_row = lv_obj_create(rows);
-    lv_obj_set_size(stat_row, lv_pct(100), LV_SIZE_CONTENT);
-    lv_obj_set_flex_flow(stat_row, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(stat_row, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_START);
-
-    stat_max = label_create_fixed(stat_row, "Max:-2.4999");
-
-    stat_min = label_create_fixed(stat_row, "Min:-2.4999");
-
-    stat_avg = label_create_fixed(stat_row, "Avg:-2.4999");
-
-
-    #define CHART_Y_DIVISION 5
-    #define CHART_Y_SCALE (1 << 16)
-
-    lv_obj_t *chart_wrapper = lv_obj_create(rows);
-    lv_obj_set_width(chart_wrapper, lv_pct(100));
-    lv_obj_set_flex_grow(chart_wrapper, 1);
-    lv_obj_set_flex_flow(chart_wrapper, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(chart_wrapper, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER);
-
-    scale = lv_scale_create(chart_wrapper);
-    lv_scale_set_mode(scale, LV_SCALE_MODE_VERTICAL_LEFT);
-    lv_obj_set_size(scale, lv_pct(19), lv_pct(90));
-    lv_scale_set_total_tick_count(scale, CHART_Y_DIVISION);
-    lv_scale_set_label_show(scale, true);
-    lv_scale_set_major_tick_every(scale, 1);
-    lv_scale_set_range(scale, 0, CHART_Y_SCALE);
-
-    chart = lv_chart_create(chart_wrapper);
-    lv_obj_set_size(chart, lv_pct(81), lv_pct(90));
-    lv_chart_set_type(chart, LV_CHART_TYPE_LINE);
-    lv_chart_set_point_count(chart, DMM_STAT_MAX_NB);
-    lv_chart_set_div_line_count(chart, CHART_Y_DIVISION, 7);
-    lv_chart_set_axis_range(chart, LV_CHART_AXIS_PRIMARY_Y, 0, CHART_Y_SCALE);
-    lv_chart_series_t *chart_ser = lv_chart_add_series(chart, lv_palette_main(LV_PALETTE_GREEN), LV_CHART_AXIS_PRIMARY_Y);
-    chart_ser_y_points = lv_chart_get_series_y_array(chart, chart_ser);
-
-
-    return scr;
 }
 
-void screen_dmm_handle_key(lv_event_code_t event_code, keypad_t key)
+static lv_obj_t *screen_dmm_handle_key(lv_event_code_t event_code, keypad_t key)
 {
     if (event_code == LV_EVENT_SHORT_CLICKED)
     {
@@ -242,15 +166,10 @@ void screen_dmm_handle_key(lv_event_code_t event_code, keypad_t key)
     {
         switch (key)
         {
-            case KEYPAD_POWER:
-                power_set(false);
-                break;
-
             case KEYPAD_UP:
                 beep_short();
                 //tmr_counter_enable(TMR5, 1);
-                //tester_enter();
-                break;
+                return screen_tester;
 
             case KEYPAD_RANGE_REL:
                 beep_short();
@@ -261,7 +180,7 @@ void screen_dmm_handle_key(lv_event_code_t event_code, keypad_t key)
                 beep_short();
                 //tmr_counter_enable(&TMR5,1);
                 //DAT_200003fc = 3;
-                //setup_draw();
+                //return screen_setup;
                 break;
 
             case KEYPAD_RETURN:
@@ -269,9 +188,10 @@ void screen_dmm_handle_key(lv_event_code_t event_code, keypad_t key)
                 break;
         }
     }
+    return screen_dmm;
 }
 
-void screen_dmm_update(void)
+static void screen_dmm_update(void)
 {
     dmm_result_t result;
     if (!dmm_get(&result))
@@ -378,4 +298,92 @@ void screen_dmm_update(void)
         scale_label_p[i] = scale_label[i];
     }
     lv_scale_set_text_src(scale, scale_label_p);
+}
+
+void screen_dmm_create(void)
+{
+    screen_dmm = lv_obj_create(NULL);
+
+    lv_obj_t *rows = lv_obj_create(screen_dmm);
+    lv_obj_set_size(rows, lv_pct(100), lv_pct(100));
+    lv_obj_set_flex_flow(rows, LV_FLEX_FLOW_COLUMN);
+
+
+    lv_obj_t *top_row = lv_obj_create(rows);
+    lv_obj_set_size(top_row, lv_pct(100), LV_SIZE_CONTENT);
+    lv_obj_set_flex_flow(top_row, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(top_row, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+
+    hold = label_create_fixed(top_row, "HOLD");
+    lv_obj_set_style_text_color(hold, lv_color_make(0xff, 0, 0), 0);
+
+    auto_rel = label_create_fixed(top_row, "AUTO");
+
+    meas_freq = label_create_fixed(top_row, "0.000Hz");
+
+    lv_obj_t *batt = lv_label_create(top_row);
+    lv_label_set_text_static(batt, "BATT"); /* TODO */
+
+
+    lv_obj_t *meas_row = lv_obj_create(rows);
+    lv_obj_set_size(meas_row, lv_pct(100), LV_SIZE_CONTENT);
+    lv_obj_set_flex_flow(meas_row, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(meas_row, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_START);
+
+    ac_dc = label_create_fixed(meas_row, "DC");
+    lv_obj_set_height(ac_dc, lv_pct(100));
+
+    meas_main = lv_label_create(meas_row);
+    lv_obj_set_style_text_font(meas_main, &noto_sans_semibold_64, 0);
+    lv_label_set_text_static(meas_main, "-2.4999");
+    lv_obj_update_layout(meas_main);
+    lv_obj_set_width(meas_main, lv_obj_get_width(meas_main));
+    lv_obj_set_style_text_align(meas_main, LV_TEXT_ALIGN_RIGHT, 0);
+
+    meas_unit = label_create_fixed(meas_row, "MΩ");
+
+
+    lv_obj_t *stat_row = lv_obj_create(rows);
+    lv_obj_set_size(stat_row, lv_pct(100), LV_SIZE_CONTENT);
+    lv_obj_set_flex_flow(stat_row, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(stat_row, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_START);
+
+    stat_max = label_create_fixed(stat_row, "Max:-2.4999");
+
+    stat_min = label_create_fixed(stat_row, "Min:-2.4999");
+
+    stat_avg = label_create_fixed(stat_row, "Avg:-2.4999");
+
+
+    lv_obj_t *chart_wrapper = lv_obj_create(rows);
+    lv_obj_set_width(chart_wrapper, lv_pct(100));
+    lv_obj_set_flex_grow(chart_wrapper, 1);
+    lv_obj_set_flex_flow(chart_wrapper, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(chart_wrapper, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER);
+
+    scale = lv_scale_create(chart_wrapper);
+    lv_scale_set_mode(scale, LV_SCALE_MODE_VERTICAL_LEFT);
+    lv_obj_set_size(scale, lv_pct(19), lv_pct(90));
+    lv_scale_set_total_tick_count(scale, CHART_Y_DIVISION);
+    lv_scale_set_label_show(scale, true);
+    lv_scale_set_major_tick_every(scale, 1);
+    lv_scale_set_range(scale, 0, CHART_Y_SCALE);
+
+    chart = lv_chart_create(chart_wrapper);
+    lv_obj_set_size(chart, lv_pct(81), lv_pct(90));
+    lv_chart_set_type(chart, LV_CHART_TYPE_LINE);
+    lv_chart_set_point_count(chart, DMM_STAT_MAX_NB);
+    lv_chart_set_div_line_count(chart, CHART_Y_DIVISION, 7);
+    lv_chart_set_axis_range(chart, LV_CHART_AXIS_PRIMARY_Y, 0, CHART_Y_SCALE);
+    lv_chart_series_t *chart_ser = lv_chart_add_series(chart, lv_palette_main(LV_PALETTE_GREEN), LV_CHART_AXIS_PRIMARY_Y);
+    chart_ser_y_points = lv_chart_get_series_y_array(chart, chart_ser);
+
+
+    static screen_user_data_t ud =
+    {
+        .enter      = screen_dmm_enter,
+        .handle_key = screen_dmm_handle_key,
+        .update     = screen_dmm_update,
+    };
+    lv_obj_set_user_data(screen_dmm, &ud);
 }

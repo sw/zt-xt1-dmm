@@ -14,7 +14,7 @@
 #include "keypad.h"
 #include "lv_theme_zt.h"
 #include "power.h"
-#include "screen_dmm.h"
+#include "screen.h"
 #ifdef AT32F403ACGT7
 #include "misc.h"
 
@@ -82,7 +82,18 @@ void key_event_cb(lv_event_t *e)
     keypad_t key = lv_indev_get_key(indev);
     lv_event_code_t code = lv_event_get_code(e);
 
-    screen_dmm_handle_key(code, key);
+    if (   (code == LV_EVENT_LONG_PRESSED)
+        && (key == KEYPAD_POWER) )
+    {
+        power_set(false);
+    }
+
+    lv_obj_t *scr = ((screen_user_data_t *)lv_obj_get_user_data(lv_screen_active()))->handle_key(code, key);
+    if (scr != lv_screen_active())
+    {
+        lv_screen_load(scr);
+        ((screen_user_data_t *)lv_obj_get_user_data(scr))->enter();
+    }
 }
 
 int main(void)
@@ -115,8 +126,11 @@ int main(void)
     lv_theme_t *th = lv_theme_zt_init(lcd_disp);
     lv_display_set_theme(lcd_disp, th);
 
-    lv_obj_t *screen_dmm = screen_dmm_create();
+    screen_dmm_create();
+    screen_tester_create();
+
     lv_screen_load(screen_dmm);
+    ((screen_user_data_t *)lv_obj_get_user_data(lv_screen_active()))->enter();
 
 #ifdef AT32F403ACGT7
     /* wait for power button to be released before setting up LVGL keypad handling */
@@ -144,7 +158,7 @@ int main(void)
         lv_timer_handler();
         delay_ms(20);
 
-        screen_dmm_update();
+        ((screen_user_data_t *)lv_obj_get_user_data(lv_screen_active()))->update();
     }
     return 0;
 }
