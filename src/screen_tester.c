@@ -20,6 +20,10 @@ extern const lv_image_dsc_t img_pmos;
 extern const lv_image_dsc_t img_bjt_npn;
 extern const lv_image_dsc_t img_bjt_pnp;
 
+extern const lv_image_dsc_t img_igbt;
+extern const lv_image_dsc_t img_thyristor;
+extern const lv_image_dsc_t img_triac;
+
 extern const lv_image_dsc_t img_probe1;
 extern const lv_image_dsc_t img_probe2;
 extern const lv_image_dsc_t img_probe3;
@@ -163,14 +167,76 @@ static void component_bjt(const tester_result_t *result)
     lv_obj_set_pos(probes[2], 133, 183);
     lv_image_set_src(probes[2], img_probes[result->probes[2]]);
 
+    char uf_s[16] = { 0 };
+    if (result->bd)
+    {
+        sprintf(uf_s, "\nUf = %0.2fV", result->diode_vf);
+    }
+
     lv_label_set_text_fmt(values,
-        "hFE = %.0f\n"
-        "Ube = %.2fV\n"
-        "Ic = %.2fμA",
+        "hFE = %.0f\nUbe = %.2fV\nIc = %.2fμA%s",
         result->hfe,
         result->bjt_ube,
-        result->current_mA * 1e3f);
-    /* TODO: Uf */
+        result->current_mA * 1e3f,
+        uf_s);
+}
+
+static void component_igbt(const tester_result_t *result)
+{
+    lv_label_set_text_static(component, "IGBT");
+
+    lv_obj_set_pos(symbol, 57, 115);
+    lv_image_set_src(symbol, &img_igbt);
+
+    lv_obj_set_pos(probes[0], 23, 143);
+    lv_image_set_src(probes[0], img_probes[result->probes[0]]);
+    lv_obj_set_pos(probes[1], 133, 103);
+    lv_image_set_src(probes[1], img_probes[result->probes[1]]);
+    lv_obj_set_pos(probes[2], 133, 183);
+    lv_image_set_src(probes[2], img_probes[result->probes[2]]);
+
+    char cap_s[16] = { 0 };
+    if (result->capacitance_pF < 1e3f)
+    {
+        sprintf(cap_s, "\nCg = %0.0fpF", result->capacitance_pF);
+    }
+    else if (result->capacitance_pF < 1e6f)
+    {
+        sprintf(cap_s, "\nCg = %0.2fnF", result->capacitance_pF / 1e3f);
+    }
+
+    char uf_s[16] = { 0 };
+    if (result->bd)
+    {
+        sprintf(uf_s, "Uf = %0.2fV\n", result->diode_vf);
+    }
+
+    lv_label_set_text_fmt(values,
+        "%sUT = %0.2fV\nIc = %0.1fμA%s",
+        uf_s,
+        result->emos_uth,
+        result->current_mA * 1e3f,
+        cap_s);
+}
+
+static void component_thy_triac(const tester_result_t *result)
+{
+    lv_label_set_text_static(component, result->component == COMPONENT_TRIAC ? "TRIAC" : "Thyristor");
+
+    lv_obj_set_pos(symbol, 57, 88 + 17 * (result->component == COMPONENT_THYRISTOR));
+    lv_image_set_src(symbol, result->component == COMPONENT_TRIAC ? &img_triac : &img_thyristor);
+
+    lv_obj_set_pos(probes[1], 23, 120);
+    lv_image_set_src(probes[1], img_probes[result->probes[1]]);
+    lv_obj_set_pos(probes[0], 156, 175);
+    lv_image_set_src(probes[0], img_probes[result->probes[0]]);
+    lv_obj_set_pos(probes[2], 177, 120);
+    lv_image_set_src(probes[2], img_probes[result->probes[2]]);
+
+    lv_label_set_text_fmt(values,
+        "UG = %0.2fV\nUT = %0.2fV",
+        result->thy_ug,
+        result->diode_vf);
 }
 
 static void screen_tester_update(void)
@@ -202,23 +268,17 @@ static void screen_tester_update(void)
         case COMPONENT_TESTING:
             lv_label_set_text_static(component, "Testing...");
             break;
-        case COMPONENT_JFET:       component_jfet(&result);   break;
+        case COMPONENT_JFET:       component_jfet(&result);      break;
         case COMPONENT_DMOS:
-        case COMPONENT_EMOS:       component_mosfet(&result); break;
+        case COMPONENT_EMOS:       component_mosfet(&result);    break;
         case COMPONENT_BJT:
-        case COMPONENT_DARLINGTON: component_bjt(&result);    break;
+        case COMPONENT_DARLINGTON: component_bjt(&result);       break;
         case COMPONENT_UJT:
             lv_label_set_text_static(component, "UJT");
             break;
-        case COMPONENT_IGBT:
-            lv_label_set_text_static(component, "IGBT");
-            break;
+        case COMPONENT_IGBT:       component_igbt(&result);      break;
         case COMPONENT_THYRISTOR:
-            lv_label_set_text_static(component, "Thyristor");
-            break;
-        case COMPONENT_TRIAC:
-            lv_label_set_text_static(component, "TRIAC");
-            break;
+        case COMPONENT_TRIAC:      component_thy_triac(&result); break;
         case COMPONENT_DIODE:
             lv_label_set_text_static(component, "Diode");
             break;
@@ -280,6 +340,7 @@ void screen_tester_create(void)
     lv_label_set_text_static(values, "");
     lv_obj_set_width(values, lv_pct(100));
     lv_obj_set_style_text_align(values, LV_TEXT_ALIGN_LEFT, 0);
+    lv_obj_set_style_text_line_space(values, 4, 0);
 
     static screen_user_data_t ud =
     {

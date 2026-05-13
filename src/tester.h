@@ -62,6 +62,7 @@ typedef struct
         float emos_uth;
         float dmos_ugs;
         float jfet_ug;
+        float thy_ug;
     };
     float current_mA;
     float cap_vloss;

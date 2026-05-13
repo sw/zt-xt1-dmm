@@ -27,6 +27,7 @@ set(INCLUDES
 set(SOURCES_C
     ${PROJECT_SOURCE_DIR}/src/img/bjt_npn.c
     ${PROJECT_SOURCE_DIR}/src/img/bjt_pnp.c
+    ${PROJECT_SOURCE_DIR}/src/img/igbt.c
     ${PROJECT_SOURCE_DIR}/src/img/njfet.c
     ${PROJECT_SOURCE_DIR}/src/img/nmos.c
     ${PROJECT_SOURCE_DIR}/src/img/pjfet.c
@@ -34,6 +35,8 @@ set(SOURCES_C
     ${PROJECT_SOURCE_DIR}/src/img/probe1.c
     ${PROJECT_SOURCE_DIR}/src/img/probe2.c
     ${PROJECT_SOURCE_DIR}/src/img/probe3.c
+    ${PROJECT_SOURCE_DIR}/src/img/thyristor.c
+    ${PROJECT_SOURCE_DIR}/src/img/triac.c
     ${PROJECT_SOURCE_DIR}/src/lv_theme_zt.c
     ${PROJECT_SOURCE_DIR}/src/main.c
     ${PROJECT_SOURCE_DIR}/src/noto_sans_regular_16.c
