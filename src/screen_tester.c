@@ -1,13 +1,14 @@
 #include <stdio.h>
 
 #include "beep.h"
+#include "misc.h"
 #include "screen.h"
 #include "tester.h"
 
 lv_obj_t *screen_tester;
 static lv_obj_t *component;
 static lv_obj_t *subtype;
-static lv_obj_t *symbol;
+static lv_obj_t *symbol[2];
 static lv_obj_t *probes[3];
 static lv_obj_t *values;
 
@@ -23,6 +24,12 @@ extern const lv_image_dsc_t img_bjt_pnp;
 extern const lv_image_dsc_t img_igbt;
 extern const lv_image_dsc_t img_thyristor;
 extern const lv_image_dsc_t img_triac;
+
+extern const lv_image_dsc_t img_diode;
+extern const lv_image_dsc_t img_edoid;
+extern const lv_image_dsc_t img_capacitor;
+extern const lv_image_dsc_t img_resistor;
+extern const lv_image_dsc_t img_inductor;
 
 extern const lv_image_dsc_t img_probe1;
 extern const lv_image_dsc_t img_probe2;
@@ -88,8 +95,8 @@ static void component_jfet(const tester_result_t *result)
     lv_label_set_text_static(component, "JFET");
     lv_label_set_text_static(subtype, result->channel == CHANNEL_P ? "P-channel" : "N-channel");
 
-    lv_obj_set_pos(symbol, 57, 115);
-    lv_image_set_src(symbol, result->channel == CHANNEL_P ? &img_pjfet : &img_njfet);
+    lv_obj_set_pos(symbol[0], 57, 115);
+    lv_image_set_src(symbol[0], result->channel == CHANNEL_P ? &img_pjfet : &img_njfet);
 
     lv_obj_set_pos(probes[0], 23, 143);
     lv_image_set_src(probes[0], img_probes[result->probes[0]]);
@@ -110,8 +117,8 @@ static void component_mosfet(const tester_result_t *result)
     /* TODO: different image for depletion-mode */
     lv_label_set_text_static(subtype, result->channel == CHANNEL_P ? "P-channel" : "N-channel");
 
-    lv_obj_set_pos(symbol, 57, 115);
-    lv_image_set_src(symbol, result->channel == CHANNEL_P ? &img_pmos : &img_nmos);
+    lv_obj_set_pos(symbol[0], 57, 115);
+    lv_image_set_src(symbol[0], result->channel == CHANNEL_P ? &img_pmos : &img_nmos);
 
     lv_obj_set_pos(probes[0], 23, 168);
     lv_image_set_src(probes[0], img_probes[result->probes[0]]);
@@ -157,8 +164,8 @@ static void component_bjt(const tester_result_t *result)
     /* TODO: different image for Darlington */
     lv_label_set_text_static(subtype, result->junction == JUNCTION_PNP ? "PNP" : "NPN");
 
-    lv_obj_set_pos(symbol, 57, 115);
-    lv_image_set_src(symbol, result->junction == JUNCTION_PNP ? &img_bjt_pnp : &img_bjt_npn);
+    lv_obj_set_pos(symbol[0], 57, 115);
+    lv_image_set_src(symbol[0], result->junction == JUNCTION_PNP ? &img_bjt_pnp : &img_bjt_npn);
 
     lv_obj_set_pos(probes[0], 23, 143);
     lv_image_set_src(probes[0], img_probes[result->probes[0]]);
@@ -185,8 +192,8 @@ static void component_igbt(const tester_result_t *result)
 {
     lv_label_set_text_static(component, "IGBT");
 
-    lv_obj_set_pos(symbol, 57, 115);
-    lv_image_set_src(symbol, &img_igbt);
+    lv_obj_set_pos(symbol[0], 57, 115);
+    lv_image_set_src(symbol[0], &img_igbt);
 
     lv_obj_set_pos(probes[0], 23, 143);
     lv_image_set_src(probes[0], img_probes[result->probes[0]]);
@@ -223,8 +230,8 @@ static void component_thy_triac(const tester_result_t *result)
 {
     lv_label_set_text_static(component, result->component == COMPONENT_TRIAC ? "TRIAC" : "Thyristor");
 
-    lv_obj_set_pos(symbol, 57, 88 + 17 * (result->component == COMPONENT_THYRISTOR));
-    lv_image_set_src(symbol, result->component == COMPONENT_TRIAC ? &img_triac : &img_thyristor);
+    lv_obj_set_pos(symbol[0], 57, 88 + 17 * (result->component == COMPONENT_THYRISTOR));
+    lv_image_set_src(symbol[0], result->component == COMPONENT_TRIAC ? &img_triac : &img_thyristor);
 
     lv_obj_set_pos(probes[1], 23, 120);
     lv_image_set_src(probes[1], img_probes[result->probes[1]]);
@@ -237,6 +244,242 @@ static void component_thy_triac(const tester_result_t *result)
         "UG = %0.2fV\nUT = %0.2fV",
         result->thy_ug,
         result->diode_vf);
+}
+
+static void component_diode(const tester_result_t *result)
+{
+    lv_label_set_text_static(component, "Diode");
+
+    lv_obj_set_pos(symbol[0], 75, 133);
+    lv_image_set_src(symbol[0], result->probes[2] < result->probes[0] ? &img_diode : &img_edoid);
+
+    lv_obj_set_pos(probes[0], 156, 126);
+    lv_image_set_src(probes[0], img_probes[MAX(result->probes[0], result->probes[2])]);
+    lv_obj_set_pos(probes[2], 20, 126);
+    lv_image_set_src(probes[2], img_probes[MIN(result->probes[0], result->probes[2])]);
+
+    char cap_s[16] = { 0 };
+    if (result->capacitance_pF > 0.0f)
+    {
+        sprintf(cap_s, "\nC = %0.0fpF", result->capacitance_pF);
+    }
+
+    char ir_s[16] = { 0 };
+    if (result->current_mA > 0.0f)
+    {
+        if (result->current_mA < 0.0001f)
+        {
+            sprintf(ir_s, "\nIr = %0.0fnA", result->current_mA * 1e6f);
+        }
+        else
+        {
+            sprintf(ir_s, "\nIr = %0.1fμA", result->current_mA * 1e3f);
+        }
+    }
+
+    lv_label_set_text_fmt(values,
+        "Uf = %0.2fV%s%s",
+        result->diode_vf,
+        cap_s,
+        ir_s);
+}
+
+static void component_diode2(const tester_result_t *result)
+{
+    lv_label_set_text_static(component, "Dual Diode");
+
+    lv_obj_set_pos(probes[0], 10, 126);
+    lv_image_set_src(probes[0], img_probes[0]);
+
+    lv_obj_set_pos(probes[1], 88, 126);
+    lv_image_set_src(probes[1], img_probes[1]);
+
+    lv_obj_set_pos(probes[2], 166, 126);
+    lv_image_set_src(probes[2], img_probes[2]);
+
+    char s[2][10] = { 0 };
+    int i = 0;
+    /* TODO: paint lines */
+    if (result->diode_vf_a[0] < 4.8f)
+    {
+        lv_obj_set_pos(symbol[i], 35, 133);
+        lv_image_set_src(symbol[i], &img_edoid);
+        sprintf(s[i], "1-2 %.2fV", result->diode_vf_a[0]);
+        i++;
+    }
+    if (result->diode_vf_a[1] < 4.8f)
+    {
+        lv_obj_set_pos(symbol[i], 40, 133);
+        lv_image_set_src(symbol[i], &img_diode);
+        sprintf(s[i], "2-1 %.2fV", result->diode_vf_a[1]);
+        i++;
+    }
+    if (result->diode_vf_a[2] < 4.8f)
+    {
+        lv_obj_set_pos(symbol[i], 75, 96);
+        lv_image_set_src(symbol[i], &img_edoid);
+        sprintf(s[i], "1-3 %.2fV", result->diode_vf_a[2]);
+        i++;
+    }
+    if (result->diode_vf_a[3] < 4.8f)
+    {
+        lv_obj_set_pos(symbol[i], 79, 96);
+        lv_image_set_src(symbol[i], &img_diode);
+        sprintf(s[i], "3-1 %.2fV", result->diode_vf_a[3]);
+        i++;
+    }
+    if (result->diode_vf_a[4] < 4.8f)
+    {
+        lv_obj_set_pos(symbol[i], 115, 133);
+        lv_image_set_src(symbol[i], &img_edoid);
+        sprintf(s[i], "2-3 %.2fV", result->diode_vf_a[4]);
+        i++;
+    }
+    if (result->diode_vf_a[5] < 4.8f)
+    {
+        lv_obj_set_pos(symbol[i], 118, 133);
+        lv_image_set_src(symbol[i], &img_diode);
+        sprintf(s[i], "3-2 %.2fV", result->diode_vf_a[5]);
+        i++;
+    }
+
+    lv_label_set_text_fmt(values, "%s\n%s", s[0], s[1]);
+}
+
+static void component_capacitor(const tester_result_t *result)
+{
+    lv_label_set_text_static(component, "Capacitor");
+
+    lv_obj_set_pos(symbol[0], 94, 128);
+    lv_image_set_src(symbol[0], &img_capacitor);
+
+    lv_obj_set_pos(probes[0], 20, 126);
+    lv_image_set_src(probes[0], img_probes[result->probes[0]]);
+    lv_obj_set_pos(probes[2], 156, 126);
+    lv_image_set_src(probes[2], img_probes[result->probes[2]]);
+
+    char cap_s[16] = { 0 };
+    if (result->capacitance_pF < 1e3f)
+    {
+        sprintf(cap_s, "%0.1fpF", result->capacitance_pF);
+    }
+    else if (result->capacitance_pF < 10e3f)
+    {
+        sprintf(cap_s, "%0.0fpF", result->capacitance_pF);
+    }
+    else if (result->capacitance_pF < 1e6f)
+    {
+        sprintf(cap_s, "%0.1fnF", result->capacitance_pF / 1e3);
+    }
+    else if (result->capacitance_pF < 10e6f)
+    {
+        sprintf(cap_s, "%0.0fnF", result->capacitance_pF / 1e3);
+    }
+    else if (result->capacitance_pF < 1e9f)
+    {
+        sprintf(cap_s, "%0.1fμF", result->capacitance_pF / 1e6);
+    }
+    else if (result->capacitance_pF < 10e9f)
+    {
+        sprintf(cap_s, "%0.0fμF", result->capacitance_pF / 1e6);
+    }
+    else if (result->capacitance_pF < 100e9f)
+    {
+        sprintf(cap_s, "%0.2fmF", result->capacitance_pF / 1e9);
+    }
+    else if (result->capacitance_pF < 1e12f)
+    {
+        /* shouldn't happen? */
+        sprintf(cap_s, "%0.2fF", result->capacitance_pF / 1e12);
+    }
+
+    char vloss_s[16] = { 0 };
+    if (result->cap_vloss > 0.0f)
+    {
+        sprintf(vloss_s, "\nVloss = %0.1f%%", result->cap_vloss);
+    }
+
+    char esr_s[16] = { 0 };
+    if (result->resistance < 1.0f)
+    {
+        sprintf(esr_s, "\nESR = %0.2fΩ", result->resistance);
+    }
+    else if (result->resistance < 100.0f)
+    {
+        sprintf(esr_s, "\nESR = %0.1fΩ", result->resistance);
+    }
+
+    lv_label_set_text_fmt(values, "%s%s%s", cap_s, vloss_s, esr_s);
+}
+
+static void component_resistor(const tester_result_t *result)
+{
+    lv_label_set_text_static(component, "Resistor");
+
+    lv_obj_set_pos(symbol[0], 77, 133);
+    lv_image_set_src(symbol[0], &img_resistor);
+
+    lv_obj_set_pos(probes[0], 20, 126);
+    lv_image_set_src(probes[0], img_probes[result->probes[0]]);
+    lv_obj_set_pos(probes[2], 156, 126);
+    lv_image_set_src(probes[2], img_probes[result->probes[2]]);
+
+    if (result->resistance < 10.0f)
+    {
+        lv_label_set_text_fmt(values, "%0.2fΩ", result->resistance);
+    }
+    else if (result->resistance < 1e3f)
+    {
+        lv_label_set_text_fmt(values, "%0.1fΩ", result->resistance);
+    }
+    else if (result->resistance < 10e3f)
+    {
+        lv_label_set_text_fmt(values, "%0.0fΩ", result->resistance);
+    }
+    else if (result->resistance < 100e3f)
+    {
+        lv_label_set_text_fmt(values, "%0.2fkΩ", result->resistance / 1e3f);
+    }
+    else if (result->resistance < 1e6f)
+    {
+        lv_label_set_text_fmt(values, "%0.1fkΩ", result->resistance / 1e3f);
+    }
+    else if (result->resistance < 10e6f)
+    {
+        lv_label_set_text_fmt(values, "%0.2fMΩ", result->resistance / 1e6f);
+    }
+    else if (result->resistance < 100e6f)
+    {
+        lv_label_set_text_fmt(values, "%0.1fMΩ", result->resistance / 1e6f);
+    }
+}
+
+static void component_inductor(const tester_result_t *result)
+{
+    lv_label_set_text_static(component, "Inductor");
+
+    lv_obj_set_pos(symbol[0], 75, 137);
+    lv_image_set_src(symbol[0], &img_inductor);
+
+    lv_obj_set_pos(probes[0], 20, 126);
+    lv_image_set_src(probes[0], img_probes[result->probes[0]]);
+    lv_obj_set_pos(probes[2], 156, 126);
+    lv_image_set_src(probes[2], img_probes[result->probes[2]]);
+
+    char r_s[16] = { 0 };
+    if (result->resistance < 1e3f)
+    {
+        sprintf(r_s, "\nR = %0.1fΩ", result->resistance);
+    }
+
+    if (result->inductance_uH < 100e3f)
+    {
+        lv_label_set_text_fmt(values, "%0.2fmH%s", result->inductance_uH / 1e3f, r_s);
+    }
+    else
+    {
+        lv_label_set_text_fmt(values, "%0.2fH%s", result->inductance_uH / 1e6f, r_s);
+    }
 }
 
 static void screen_tester_update(void)
@@ -254,7 +497,8 @@ static void screen_tester_update(void)
 
     lv_label_set_text_static(subtype, "");
     lv_label_set_text_static(values, "");
-    lv_image_set_src(symbol, NULL);
+    lv_image_set_src(symbol[0], NULL);
+    lv_image_set_src(symbol[1], NULL);
     lv_image_set_src(probes[0], NULL);
     lv_image_set_src(probes[1], NULL);
     lv_image_set_src(probes[2], NULL);
@@ -279,24 +523,14 @@ static void screen_tester_update(void)
         case COMPONENT_IGBT:       component_igbt(&result);      break;
         case COMPONENT_THYRISTOR:
         case COMPONENT_TRIAC:      component_thy_triac(&result); break;
-        case COMPONENT_DIODE:
-            lv_label_set_text_static(component, "Diode");
-            break;
-        case COMPONENT_2DIODE:
-            lv_label_set_text_static(component, "Dual Diode");
-            break;
+        case COMPONENT_DIODE:      component_diode(&result);     break;
+        case COMPONENT_2DIODE:     component_diode2(&result);    break;
         case COMPONENT_BATTERY:
             lv_label_set_text_static(component, "Battery");
             break;
-        case COMPONENT_CAP:
-            lv_label_set_text_static(component, "Capacitor");
-            break;
-        case COMPONENT_RESISTOR:
-            lv_label_set_text_static(component, "Resistor");
-            break;
-        case COMPONENT_INDUCTOR:
-            lv_label_set_text_static(component, "Inductor");
-            break;
+        case COMPONENT_CAP:        component_capacitor(&result); break;
+        case COMPONENT_RESISTOR:   component_resistor(&result);  break;
+        case COMPONENT_INDUCTOR:   component_inductor(&result);  break;
         case COMPONENT_ZENER:
             lv_label_set_text_static(component, "Zener Diode");
             break;
@@ -324,7 +558,8 @@ void screen_tester_create(void)
     lv_label_set_text_static(subtype, "");
     lv_obj_set_width(subtype, LV_PCT(100));
 
-    symbol = lv_image_create(screen_tester);
+    symbol[0] = lv_image_create(screen_tester);
+    symbol[1] = lv_image_create(screen_tester);
     probes[0] = lv_image_create(screen_tester);
     probes[1] = lv_image_create(screen_tester);
     probes[2] = lv_image_create(screen_tester);

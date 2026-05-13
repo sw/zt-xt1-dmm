@@ -39,7 +39,7 @@ set(COMMON_FLAGS
     "-Wall"
     #"-Werror"
     "-Wextra"
-    "-pedantic"
+    #"-pedantic"
     "-fdata-sections"
     "-ffunction-sections"
 )
