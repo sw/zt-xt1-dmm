@@ -160,3 +160,8 @@ void tester_send(uint_fast8_t id, uint_fast8_t payload)
         usart_data_transmit(USART3, tx_frame.raw[i]);
     }
 }
+
+void tester_zener_enable(bool enable)
+{
+    gpio_bits_write(GPIOB, GPIO_PINS_1, enable);
+}

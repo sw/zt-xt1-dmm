@@ -12,6 +12,8 @@ static lv_obj_t *symbol[2];
 static lv_obj_t *probes[3];
 static lv_obj_t *values;
 
+static bool zener_enabled;
+
 extern const lv_image_dsc_t img_njfet;
 extern const lv_image_dsc_t img_pjfet;
 
@@ -27,6 +29,7 @@ extern const lv_image_dsc_t img_triac;
 
 extern const lv_image_dsc_t img_diode;
 extern const lv_image_dsc_t img_edoid;
+extern const lv_image_dsc_t img_zener;
 extern const lv_image_dsc_t img_capacitor;
 extern const lv_image_dsc_t img_resistor;
 extern const lv_image_dsc_t img_inductor;
@@ -34,12 +37,35 @@ extern const lv_image_dsc_t img_inductor;
 extern const lv_image_dsc_t img_probe1;
 extern const lv_image_dsc_t img_probe2;
 extern const lv_image_dsc_t img_probe3;
+extern const lv_image_dsc_t img_probea;
+extern const lv_image_dsc_t img_probek;
 
 static const lv_image_dsc_t *img_probes[] = { &img_probe1, &img_probe2, &img_probe3 };
+
+static void screen_clear(void)
+{
+    lv_label_set_text_static(component, "");
+    lv_label_set_text_static(subtype, "");
+    lv_label_set_text_static(values, "");
+    lv_image_set_src(symbol[0], NULL);
+    if (zener_enabled)
+    {
+        lv_obj_set_pos(symbol[1], 130, 202);
+        lv_image_set_src(symbol[1], &img_zener);
+    }
+    else
+    {
+        lv_image_set_src(symbol[1], NULL);
+    }
+    lv_image_set_src(probes[0], NULL);
+    lv_image_set_src(probes[1], NULL);
+    lv_image_set_src(probes[2], NULL);
+}
 
 static void screen_tester_enter(void)
 {
     tester_init();
+    screen_clear();
 }
 
 static lv_obj_t *screen_tester_handle_key(lv_event_code_t event_code, keypad_t key)
@@ -50,13 +76,13 @@ static lv_obj_t *screen_tester_handle_key(lv_event_code_t event_code, keypad_t k
         {
             case KEYPAD_UP:
                 beep_short();
-                tester_send(1, 0/* tester_zener_enable */);
+                tester_send(1, zener_enabled);
                 break;
 
             case KEYPAD_DOWN:
                 beep_short();
-                //tester_zener_enable = 0;
-                //gpio_bits_write((uint *)&GPIOB,2,0);
+                zener_enabled = false;
+                tester_zener_enable(zener_enabled);
                 //return screen_tool;
                 break;
         }
@@ -67,21 +93,21 @@ static lv_obj_t *screen_tester_handle_key(lv_event_code_t event_code, keypad_t k
         {
             case KEYPAD_UP:
                 beep_short();
-                //tester_zener_enable = 0;
-                //gpio_bits_write((uint *)&GPIOB,2,0);
+                zener_enabled = false;
+                tester_zener_enable(zener_enabled);
                 return screen_dmm;
 
             case KEYPAD_DOWN:
                 beep_short();
-                //tester_zener_enable = tester_zener_enable == 0;
-                //gpio_bits_write((uint *)&GPIOB,2,(uint)tester_zener_enable);
-                //tester_switchcase();
+                zener_enabled = !zener_enabled;
+                tester_zener_enable(zener_enabled);
+                screen_clear();
                 break;
 
             case KEYPAD_OK_MENU_HOLD:
                 beep_short();
-                //tester_zener_enable = 0;
-                //gpio_bits_write((uint *)&GPIOB,2,0);
+                zener_enabled = false;
+                tester_zener_enable(zener_enabled);
                 //DAT_200003fc = 1;
                 //return screen_setup;
                 break;
@@ -482,6 +508,21 @@ static void component_inductor(const tester_result_t *result)
     }
 }
 
+static void component_zener(const tester_result_t *result)
+{
+    lv_label_set_text_static(component, "Zener");
+
+    lv_obj_set_pos(symbol[0], 75, 124);
+    lv_image_set_src(symbol[0], &img_zener);
+
+    lv_obj_set_pos(probes[0], 20, 126);
+    lv_image_set_src(probes[0], &img_probek);
+    lv_obj_set_pos(probes[2], 156, 126);
+    lv_image_set_src(probes[2], &img_probea);
+
+    lv_label_set_text_fmt(values, "Uz = %0.1fV", result->diode_vf);
+}
+
 static void screen_tester_update(void)
 {
     tester_result_t result;
@@ -495,13 +536,7 @@ static void screen_tester_update(void)
         beep_short();
     }
 
-    lv_label_set_text_static(subtype, "");
-    lv_label_set_text_static(values, "");
-    lv_image_set_src(symbol[0], NULL);
-    lv_image_set_src(symbol[1], NULL);
-    lv_image_set_src(probes[0], NULL);
-    lv_image_set_src(probes[1], NULL);
-    lv_image_set_src(probes[2], NULL);
+    screen_clear();
 
     switch (result.component)
     {
@@ -531,9 +566,7 @@ static void screen_tester_update(void)
         case COMPONENT_CAP:        component_capacitor(&result); break;
         case COMPONENT_RESISTOR:   component_resistor(&result);  break;
         case COMPONENT_INDUCTOR:   component_inductor(&result);  break;
-        case COMPONENT_ZENER:
-            lv_label_set_text_static(component, "Zener Diode");
-            break;
+        case COMPONENT_ZENER:      component_zener(&result);     break;
     }
 }
 

@@ -39,9 +39,12 @@ set(SOURCES_C
     ${PROJECT_SOURCE_DIR}/src/img/probe1.c
     ${PROJECT_SOURCE_DIR}/src/img/probe2.c
     ${PROJECT_SOURCE_DIR}/src/img/probe3.c
+    ${PROJECT_SOURCE_DIR}/src/img/probea.c
+    ${PROJECT_SOURCE_DIR}/src/img/probek.c
     ${PROJECT_SOURCE_DIR}/src/img/resistor.c
     ${PROJECT_SOURCE_DIR}/src/img/thyristor.c
     ${PROJECT_SOURCE_DIR}/src/img/triac.c
+    ${PROJECT_SOURCE_DIR}/src/img/zener.c
     ${PROJECT_SOURCE_DIR}/src/lv_theme_zt.c
     ${PROJECT_SOURCE_DIR}/src/main.c
     ${PROJECT_SOURCE_DIR}/src/noto_sans_regular_16.c
