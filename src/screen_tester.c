@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 #include "beep.h"
 #include "screen.h"
 #include "tester.h"
@@ -8,6 +10,12 @@ static lv_obj_t *subtype;
 static lv_obj_t *symbol;
 static lv_obj_t *probes[3];
 static lv_obj_t *values;
+
+extern const lv_image_dsc_t img_njfet;
+extern const lv_image_dsc_t img_pjfet;
+
+extern const lv_image_dsc_t img_nmos;
+extern const lv_image_dsc_t img_pmos;
 
 extern const lv_image_dsc_t img_bjt_npn;
 extern const lv_image_dsc_t img_bjt_pnp;
@@ -71,13 +79,82 @@ static lv_obj_t *screen_tester_handle_key(lv_event_code_t event_code, keypad_t k
     return screen_tester;
 }
 
-static void component_bjt(const tester_result_t *result)
+static void component_jfet(const tester_result_t *result)
 {
-    lv_label_set_text_static(component, "BJT");
-    lv_label_set_text_static(subtype, result->junction == JUNCTION_NPN ? "NPN" : "PNP");
+    lv_label_set_text_static(component, "JFET");
+    lv_label_set_text_static(subtype, result->channel == CHANNEL_P ? "P-channel" : "N-channel");
 
     lv_obj_set_pos(symbol, 57, 115);
-    lv_image_set_src(symbol, result->junction == JUNCTION_NPN ? &img_bjt_npn : &img_bjt_pnp);
+    lv_image_set_src(symbol, result->channel == CHANNEL_P ? &img_pjfet : &img_njfet);
+
+    lv_obj_set_pos(probes[0], 23, 143);
+    lv_image_set_src(probes[0], img_probes[result->probes[0]]);
+    lv_obj_set_pos(probes[1], 133, 103);
+    lv_image_set_src(probes[1], img_probes[result->probes[1]]);
+    lv_obj_set_pos(probes[2], 133, 183);
+    lv_image_set_src(probes[2], img_probes[result->probes[2]]);
+
+    lv_label_set_text_fmt(values,
+        "I = %0.1fmA\nUg = %0.2fV",
+        result->current_mA,
+        result->jfet_ug);
+}
+
+static void component_mosfet(const tester_result_t *result)
+{
+    lv_label_set_text_static(component, result->component == COMPONENT_DMOS ? "Depletion-mode MOSFET" : "Enhancement-mode MOSFET");
+    /* TODO: different image for depletion-mode */
+    lv_label_set_text_static(subtype, result->channel == CHANNEL_P ? "P-channel" : "N-channel");
+
+    lv_obj_set_pos(symbol, 57, 115);
+    lv_image_set_src(symbol, result->channel == CHANNEL_P ? &img_pmos : &img_nmos);
+
+    lv_obj_set_pos(probes[0], 23, 168);
+    lv_image_set_src(probes[0], img_probes[result->probes[0]]);
+    lv_obj_set_pos(probes[1], 123, 93);
+    lv_image_set_src(probes[1], img_probes[result->probes[1]]);
+    lv_obj_set_pos(probes[2], 123, 189);
+    lv_image_set_src(probes[2], img_probes[result->probes[2]]);
+
+    char cap_s[16] = { 0 };
+    if (result->capacitance_pF < 1e3f)
+    {
+        sprintf(cap_s, "\nCg = %0.0fpF", result->capacitance_pF);
+    }
+    else if (result->capacitance_pF < 1e6f)
+    {
+        sprintf(cap_s, "\nCg = %0.2fnF", result->capacitance_pF / 1e3f);
+    }
+
+    if (result->component == COMPONENT_DMOS)
+    {
+        lv_label_set_text_fmt(values,
+            "UF = %0.2fV\nUgs = %0.2fV\nIdss = %0.0fmA\nRds = %0.2fΩ%s",
+            result->diode_vf,
+            result->dmos_ugs,
+            result->current_mA,
+            result->resistance,
+            cap_s);
+    }
+    else
+    {
+        lv_label_set_text_fmt(values,
+            "UF = %0.2fV\nUT = %0.2fV\nRds = %0.2fΩ%s",
+            result->diode_vf,
+            result->emos_uth,
+            result->resistance,
+            cap_s);
+    }
+}
+
+static void component_bjt(const tester_result_t *result)
+{
+    lv_label_set_text_static(component, result->component == COMPONENT_DARLINGTON ? "Darlington" : "BJT");
+    /* TODO: different image for Darlington */
+    lv_label_set_text_static(subtype, result->junction == JUNCTION_PNP ? "PNP" : "NPN");
+
+    lv_obj_set_pos(symbol, 57, 115);
+    lv_image_set_src(symbol, result->junction == JUNCTION_PNP ? &img_bjt_pnp : &img_bjt_npn);
 
     lv_obj_set_pos(probes[0], 23, 143);
     lv_image_set_src(probes[0], img_probes[result->probes[0]]);
@@ -88,12 +165,12 @@ static void component_bjt(const tester_result_t *result)
 
     lv_label_set_text_fmt(values,
         "hFE = %.0f\n"
-        "Vbe = %.2fV\n"
+        "Ube = %.2fV\n"
         "Ic = %.2fμA",
         result->hfe,
         result->bjt_ube,
-        result->ic_mA * 1000.0f);
-    /* TODO: Vf */
+        result->current_mA * 1e3f);
+    /* TODO: Uf */
 }
 
 static void screen_tester_update(void)
@@ -109,6 +186,13 @@ static void screen_tester_update(void)
         beep_short();
     }
 
+    lv_label_set_text_static(subtype, "");
+    lv_label_set_text_static(values, "");
+    lv_image_set_src(symbol, NULL);
+    lv_image_set_src(probes[0], NULL);
+    lv_image_set_src(probes[1], NULL);
+    lv_image_set_src(probes[2], NULL);
+
     switch (result.component)
     {
         default:
@@ -118,21 +202,13 @@ static void screen_tester_update(void)
         case COMPONENT_TESTING:
             lv_label_set_text_static(component, "Testing...");
             break;
-        case COMPONENT_JFET:
-            lv_label_set_text_static(component, "JFET");
-            break;
+        case COMPONENT_JFET:       component_jfet(&result);   break;
         case COMPONENT_DMOS:
-            lv_label_set_text_static(component, "DMOS");
-            break;
-        case COMPONENT_BJT:        component_bjt(&result); break;
-        case COMPONENT_DARLINGTON:
-            lv_label_set_text_static(component, "Darlington");
-            break;
+        case COMPONENT_EMOS:       component_mosfet(&result); break;
+        case COMPONENT_BJT:
+        case COMPONENT_DARLINGTON: component_bjt(&result);    break;
         case COMPONENT_UJT:
             lv_label_set_text_static(component, "UJT");
-            break;
-        case COMPONENT_EMOS:
-            lv_label_set_text_static(component, "EMOS");
             break;
         case COMPONENT_IGBT:
             lv_label_set_text_static(component, "IGBT");

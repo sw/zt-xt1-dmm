@@ -27,6 +27,10 @@ set(INCLUDES
 set(SOURCES_C
     ${PROJECT_SOURCE_DIR}/src/img/bjt_npn.c
     ${PROJECT_SOURCE_DIR}/src/img/bjt_pnp.c
+    ${PROJECT_SOURCE_DIR}/src/img/njfet.c
+    ${PROJECT_SOURCE_DIR}/src/img/nmos.c
+    ${PROJECT_SOURCE_DIR}/src/img/pjfet.c
+    ${PROJECT_SOURCE_DIR}/src/img/pmos.c
     ${PROJECT_SOURCE_DIR}/src/img/probe1.c
     ${PROJECT_SOURCE_DIR}/src/img/probe2.c
     ${PROJECT_SOURCE_DIR}/src/img/probe3.c
