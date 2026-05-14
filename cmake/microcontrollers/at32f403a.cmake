@@ -23,7 +23,6 @@ set(ASM_FLAGS
 
 # Set C compiler flags
 set(C_FLAGS
-    "-MMD"
     "-MP"
 )
 
@@ -47,12 +46,11 @@ set(COMMON_FLAGS
 # Set linker flags
 set(LINKER_FLAGS
     "-T${LINKER_SCRIPT}"
-    "-specs=picolibc.specs"
     #"-specs=nano.specs"
     #"-specs=nosys.specs"
     "-Wl,-Map=${CMAKE_PROJECT_NAME}.map,--cref"
     "-Wl,--gc-sections"
-    "-Wl,--start-group -lc -lm -lnosys -Wl,--end-group"
+    "-Wl,--start-group -lc -lm -Wl,--end-group"
     "-Wl,--print-memory-usage"
 )
 
@@ -68,15 +66,15 @@ endif()
 
 # For all languages:
 # Specify the compiler flags and join all flags into one string
-set(CMAKE_ASM_FLAGS ${ASM_FLAGS} ${MCU_FLAGS} ${C_FLAGS} ${COMMON_FLAGS})
+set(CMAKE_ASM_FLAGS ${CMAKE_ASM_FLAGS} ${ASM_FLAGS} ${MCU_FLAGS} ${C_FLAGS} ${COMMON_FLAGS})
 list(JOIN CMAKE_ASM_FLAGS " " CMAKE_ASM_FLAGS)
 
-set(CMAKE_C_FLAGS   ${MCU_FLAGS} ${C_FLAGS} ${COMMON_FLAGS})
+set(CMAKE_C_FLAGS   ${CMAKE_C_FLAGS} ${MCU_FLAGS} ${C_FLAGS} ${COMMON_FLAGS})
 list(JOIN CMAKE_C_FLAGS " " CMAKE_C_FLAGS)
 
-set(CMAKE_CXX_FLAGS ${MCU_FLAGS} ${C_FLAGS} ${CXX_FLAGS} ${COMMON_FLAGS})
+set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} ${MCU_FLAGS} ${C_FLAGS} ${CXX_FLAGS} ${COMMON_FLAGS})
 list(JOIN CMAKE_CXX_FLAGS " " CMAKE_CXX_FLAGS)
 
 # Specify the linker flags and join all flags into one string
-set(CMAKE_EXE_LINKER_FLAGS  ${MCU_FLAGS} ${LINKER_FLAGS})
+set(CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS} ${MCU_FLAGS} ${LINKER_FLAGS})
 list(JOIN CMAKE_EXE_LINKER_FLAGS " " CMAKE_EXE_LINKER_FLAGS)

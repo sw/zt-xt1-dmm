@@ -2,6 +2,12 @@
 
 #include "misc.h"
 
+void __assert_func(const char *file, int line, const char *func, const char *expr)
+{
+    (void)file; (void)line; (void)func; (void)expr;
+    while (1) { }
+}
+
 void gpio_init_simple(gpio_type *gpio_x, uint_fast32_t pins, gpio_mode_type mode, gpio_pull_type pull)
 {
     gpio_init_type init;

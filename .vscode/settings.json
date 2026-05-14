@@ -2,7 +2,7 @@
     "clangd.arguments": [
         "--compile-commands-dir=${command:cmake.buildDirectory}",
         "--header-insertion=never",
-        "--query-driver=/usr/bin/arm-none-eabi-gcc,/usr/bin/cc"
+        "--query-driver=/opt/arm-gnu-toolchain-15.2.rel1-x86_64-arm-none-eabi/bin/arm-none-eabi-gcc,/usr/bin/arm-none-eabi-gcc,/usr/bin/cc"
     ],
     "cmake.options.advanced": {
         "configurePreset": {

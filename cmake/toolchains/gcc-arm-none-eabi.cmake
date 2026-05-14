@@ -7,6 +7,8 @@ set(CMAKE_CXX_COMPILER_FORCED       TRUE)
 
 set(CROSS_COMPILER_PREFIX           arm-none-eabi)
 
+set(CROSS_COMPILER_BIN_PATH         /opt/arm-gnu-toolchain-15.2.rel1-x86_64-arm-none-eabi)
+
 if(EXISTS ${CROSS_COMPILER_BIN_PATH})
     list(APPEND CMAKE_PREFIX_PATH
         ${CROSS_COMPILER_BIN_PATH}
@@ -27,3 +29,5 @@ set(CMAKE_EXECUTABLE_SUFFIX_C       ".elf")
 set(CMAKE_EXECUTABLE_SUFFIX_CXX     ".elf")
 
 set(CMAKE_TRY_COMPILE_TARGET_TYPE   STATIC_LIBRARY)
+
+string(APPEND CMAKE_EXE_LINKER_FLAGS " -specs=picolibc.specs -lnosys")
