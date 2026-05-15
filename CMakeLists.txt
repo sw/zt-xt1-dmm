@@ -25,6 +25,8 @@ set(INCLUDES
 
 # Set source files
 set(SOURCES_C
+    ${PROJECT_SOURCE_DIR}/src/font/noto_sans_regular_16.c
+    ${PROJECT_SOURCE_DIR}/src/font/noto_sans_semibold_64.c
     ${PROJECT_SOURCE_DIR}/src/img/bjt_npn.c
     ${PROJECT_SOURCE_DIR}/src/img/bjt_pnp.c
     ${PROJECT_SOURCE_DIR}/src/img/capacitor.c
@@ -47,8 +49,6 @@ set(SOURCES_C
     ${PROJECT_SOURCE_DIR}/src/img/zener.c
     ${PROJECT_SOURCE_DIR}/src/lv_theme_zt.c
     ${PROJECT_SOURCE_DIR}/src/main.c
-    ${PROJECT_SOURCE_DIR}/src/noto_sans_regular_16.c
-    ${PROJECT_SOURCE_DIR}/src/noto_sans_semibold_64.c
     ${PROJECT_SOURCE_DIR}/src/screen_dmm.c
     ${PROJECT_SOURCE_DIR}/src/screen_tester.c
 )
