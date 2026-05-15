@@ -14,6 +14,7 @@
 #include "lv_theme_zt.h"
 #include "power.h"
 #include "screen.h"
+#include "tester.h"
 #ifdef AT32F403ACGT7
 #include "misc.h"
 
@@ -128,8 +129,14 @@ int main(void)
     screen_dmm_create();
     screen_tester_create();
 
-    lv_screen_load(screen_dmm);
-    ((screen_user_data_t *)lv_obj_get_user_data(lv_screen_active()))->enter();
+    lv_timer_handler();
+    do
+    {
+#ifdef AT32F403ACGT7
+        wdt_counter_reload();
+#endif
+    }
+    while (tester_check_update());
 
 #ifdef AT32F403ACGT7
     /* wait for power button to be released before setting up LVGL keypad handling */
@@ -138,6 +145,9 @@ int main(void)
         wdt_counter_reload();
     }
 #endif
+
+    lv_screen_load(screen_dmm);
+    ((screen_user_data_t *)lv_obj_get_user_data(lv_screen_active()))->enter();
 
     lv_indev_t *indev = lv_indev_create();
     lv_indev_set_type(indev, LV_INDEV_TYPE_KEYPAD);

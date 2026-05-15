@@ -1,6 +1,6 @@
 #include "tester.h"
 
-void tester_init(void)
+void tester_init(bool boot)
 {
 }
 
@@ -15,4 +15,9 @@ void tester_send(uint_fast8_t id, uint_fast8_t payload)
 
 void tester_zener_enable(bool enable)
 {
+}
+
+bool tester_check_update(void)
+{
+    return false;
 }

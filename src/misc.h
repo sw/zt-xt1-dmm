@@ -12,6 +12,8 @@
     #include <assert.h>
 #endif
 
+#define DIV_ROUND_UP(n, d) (((n) + (d) - 1) / (d))
+
 #define MAX(a, b) ({ \
         /* random suffix to avoid naming conflict */ \
         __typeof__(a) _value_a_ = (a); \

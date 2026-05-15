@@ -64,7 +64,7 @@ static void screen_clear(void)
 
 static void screen_tester_enter(void)
 {
-    tester_init();
+    tester_init(false);
     screen_clear();
 }
 
