@@ -12,8 +12,10 @@
 #include "misc.h"
 
 static uint8_t rx_buf[32];
-static atomic_flag rx_empty = ATOMIC_FLAG_INIT;
-static volatile uint_fast8_t rx_len;
+#ifndef ATOMIC_CHAR_LOCK_FREE
+    #error "atomic_char isn't lock-free"
+#endif
+static atomic_char rx_len;
 
 static float stat[DMM_STAT_MAX_NB];
 static uint_fast8_t stat_nb;
@@ -23,8 +25,6 @@ void dmm_init(void)
 {
     dma_init_type dma_init_struct;
     exint_init_type exint_struct;
-
-    atomic_flag_test_and_set(&rx_empty);
 
     crm_periph_clock_enable(CRM_USART2_PERIPH_CLOCK,1);
     gpio_init_simple(GPIOA, GPIO_PINS_2, GPIO_MODE_MUX, GPIO_PULL_NONE);
@@ -84,15 +84,19 @@ void USART2_IRQHandler(void)
     {
         usart_data_receive(USART2);
         dma_channel_enable(DMA1_CHANNEL6, FALSE);
-        rx_len = sizeof(rx_buf) - dma_data_number_get(DMA1_CHANNEL6);
-        atomic_flag_clear(&rx_empty);
+        atomic_store(&rx_len, sizeof(rx_buf) - dma_data_number_get(DMA1_CHANNEL6));
+        /*
+            Re-arm DMA for next frame. We assume the main thread is quick enough
+            to read the buffer before it gets overwritten.
+        */
+        dma_data_number_set(DMA1_CHANNEL6, sizeof(rx_buf));
+        dma_channel_enable(DMA1_CHANNEL6, TRUE);
     }
 }
 
 static char dmm_7seg_to_ascii(uint_fast8_t x)
 {
     static const uint8_t seg[] = {
-        //0xEB, 0x0A, 0xAD, 0x8F, 0x4E, 0xC7, 0xE7, 0x8A, 0xEF, 0xCF, 0xEE, 0x23, 0x65, 0x27, 0x61, 0xE5
     /*    afe.bgcd */
         0b11101011, /* 🯰 */
         0b00001010, /* 🯱 */
@@ -122,22 +126,15 @@ static char dmm_7seg_to_ascii(uint_fast8_t x)
             return "0123456789AutoLEC"[i];
         }
     }
-    return '\0';
+    return '?';
 }
 
 bool dmm_get(dmm_result_t *result)
 {
-    if (atomic_flag_test_and_set(&rx_empty))
+    if (atomic_exchange(&rx_len, 0) != 18)
     {
         return false;
     }
-
-    /* TODO: the flag is atomic, but the buffer isn't... */
-    uint8_t rx_copy[sizeof(rx_buf)];
-    memcpy(rx_copy, rx_buf, rx_len);
-
-    dma_data_number_set(DMA1_CHANNEL6, sizeof(rx_buf));
-    dma_channel_enable(DMA1_CHANNEL6, TRUE);
 
     memset(result, 0, sizeof(*result));
     result->main = NAN;
@@ -157,51 +154,51 @@ bool dmm_get(dmm_result_t *result)
     char digits[8] = { 0 };
     size_t d = 0;
 
-    digits[d++] = dmm_7seg_to_ascii(rx_copy[9] & 0xef);
-    if (rx_copy[8] & 0x10)
+    digits[d++] = dmm_7seg_to_ascii(rx_buf[9] & 0xef);
+    if (rx_buf[8] & 0x10)
     {
         digits[d++] = '.';
     }
-    digits[d++] = dmm_7seg_to_ascii(rx_copy[8] & 0xef);
-    if (rx_copy[7] & 0x10)
+    digits[d++] = dmm_7seg_to_ascii(rx_buf[8] & 0xef);
+    if (rx_buf[7] & 0x10)
     {
         digits[d++] = '.';
     }
-    digits[d++] = dmm_7seg_to_ascii(rx_copy[7] & 0xef);
-    if (rx_copy[6] & 0x10)
+    digits[d++] = dmm_7seg_to_ascii(rx_buf[7] & 0xef);
+    if (rx_buf[6] & 0x10)
     {
         digits[d++] = '.';
     }
-    digits[d++] = dmm_7seg_to_ascii(rx_copy[6] & 0xef);
+    digits[d++] = dmm_7seg_to_ascii(rx_buf[6] & 0xef);
     assert(d < sizeof(digits));
     result->temp_freq = strtof(digits, NULL);
 
     d = 0;
-    if (rx_copy[5] & 0x10)
+    if (rx_buf[5] & 0x10)
     {
         result->main_s[d++] = '-';
     }
-    result->main_s[d++] = dmm_7seg_to_ascii(rx_copy[5] & 0xef);
-    if (rx_copy[4] & 0x10)
+    result->main_s[d++] = dmm_7seg_to_ascii(rx_buf[5] & 0xef);
+    if (rx_buf[4] & 0x10)
     {
         result->main_s[d++] = '.';
     }
-    result->main_s[d++] = dmm_7seg_to_ascii(rx_copy[4] & 0xef);
-    if (rx_copy[3] & 0x10)
+    result->main_s[d++] = dmm_7seg_to_ascii(rx_buf[4] & 0xef);
+    if (rx_buf[3] & 0x10)
     {
         result->main_s[d++] = '.';
     }
-    result->main_s[d++] = dmm_7seg_to_ascii(rx_copy[3] & 0xef);
-    if (rx_copy[2] & 0x10)
+    result->main_s[d++] = dmm_7seg_to_ascii(rx_buf[3] & 0xef);
+    if (rx_buf[2] & 0x10)
     {
         result->main_s[d++] = '.';
     }
-    result->main_s[d++] = dmm_7seg_to_ascii(rx_copy[2] & 0xef);
-    if (rx_copy[1] & 0x10)
+    result->main_s[d++] = dmm_7seg_to_ascii(rx_buf[2] & 0xef);
+    if (rx_buf[1] & 0x10)
     {
         result->main_s[d++] = '.';
     }
-    result->main_s[d++] = dmm_7seg_to_ascii(rx_copy[1] & 0xef);
+    result->main_s[d++] = dmm_7seg_to_ascii(rx_buf[1] & 0xef);
     result->main_s[d++] = '\0';
     assert(d < sizeof(result->main_s));
     char *end;
@@ -212,57 +209,57 @@ bool dmm_get(dmm_result_t *result)
         result->main = NAN;
     }
 
-    if (rx_copy[16] & 0b01000000)
+    if (rx_buf[16] & 0b01000000)
     {
         result->unit = "Ω";
     }
-    else if (rx_copy[16] & 0b00000100)
+    else if (rx_buf[16] & 0b00000100)
     {
         result->unit = "F";
     }
-    else if (rx_copy[16] & 0b00000010)
+    else if (rx_buf[16] & 0b00000010)
     {
         result->unit = "V";
     }
-    else if (rx_copy[16] & 0b00000001)
+    else if (rx_buf[16] & 0b00000001)
     {
         result->unit = "A";
     }
-    else if (rx_copy[15] & 0b00010000)
+    else if (rx_buf[15] & 0b00010000)
     {
         result->prefix = "°";
         result->unit = "C";
     }
 
-    if (rx_copy[15] & 0b01000000)
+    if (rx_buf[15] & 0b01000000)
     {
         result->prefix = "n";
     }
-    else if (rx_copy[15] & 0b10000000)
+    else if (rx_buf[15] & 0b10000000)
     {
         result->prefix = "μ";
     }
-    else if (rx_copy[16] & 0b00001000)
+    else if (rx_buf[16] & 0b00001000)
     {
         result->prefix = "m";
     }
-    else if (rx_copy[16] & 0b00100000)
+    else if (rx_buf[16] & 0b00100000)
     {
         result->prefix = "k";
     }
-    else if (rx_copy[16] & 0b00010000)
+    else if (rx_buf[16] & 0b00010000)
     {
         result->prefix = "M";
     }
 
-    result->diode       = rx_copy[10] & 0x80;
-    result->continuity  = rx_copy[10] & 0x40;
-    result->rel         = rx_copy[10] & 0x20;
-    result->khz         = rx_copy[10] & 0x01;
-    result->ac          = rx_copy[11] & 0x40;
-    result->dc          = rx_copy[11] & 0x10;
-    result->auto_range  = rx_copy[11] & 0x04;
-    result->temperature = rx_copy[15] & 0x10;
+    result->diode       = rx_buf[10] & 0x80;
+    result->continuity  = rx_buf[10] & 0x40;
+    result->rel         = rx_buf[10] & 0x20;
+    result->khz         = rx_buf[10] & 0x01;
+    result->ac          = rx_buf[11] & 0x40;
+    result->dc          = rx_buf[11] & 0x10;
+    result->auto_range  = rx_buf[11] & 0x04;
+    result->temperature = rx_buf[15] & 0x10;
 
     if (!isnanf(result->main))
     {

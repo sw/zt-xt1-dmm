@@ -153,8 +153,6 @@ int main(void)
         wdt_counter_reload();
 #endif
         lv_timer_handler();
-        delay_ms(20);
-
         ((screen_user_data_t *)lv_obj_get_user_data(lv_screen_active()))->update();
     }
     return 0;
