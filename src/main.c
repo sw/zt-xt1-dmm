@@ -15,6 +15,7 @@
 #include "power.h"
 #include "screen.h"
 #include "tester.h"
+#include "tick.h"
 #ifdef AT32F403ACGT7
 #include "misc.h"
 
@@ -59,21 +60,6 @@ static void init_wdt(void)
     wdt_counter_reload();
     wdt_enable();
 }
-
-static uint32_t systick_interrupt_config(uint32_t ticks)
-{
-  if ((ticks - 1UL) > SysTick_LOAD_RELOAD_Msk)
-  {
-    return (1UL);
-  }
-
-  SysTick->LOAD  = (uint32_t)(ticks - 1UL);
-  NVIC_SetPriority (SysTick_IRQn, (1UL << __NVIC_PRIO_BITS) - 1UL);
-  SysTick->VAL   = 0UL;
-  SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk |
-                   SysTick_CTRL_ENABLE_Msk;
-  return (0UL);
-}
 #endif
 
 void key_event_cb(lv_event_t *e)
@@ -115,10 +101,7 @@ int main(void)
     delay_ms(1000);
     power_set(true);
 
-#ifdef AT32F403ACGT7
-    systick_clock_source_config(SYSTICK_CLOCK_SOURCE_AHBCLK_NODIV);
-    systick_interrupt_config(system_core_clock / 100);
-#endif
+    tick_init();
 
     lv_init();
 
@@ -168,7 +151,7 @@ int main(void)
     return 0;
 }
 
-void SysTick_Handler(void)
+void tick_cb(void)
 {
-    lv_tick_inc(10);
+    lv_tick_inc(1000 / TICK_HZ);
 }

@@ -77,6 +77,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Simulator")
         ${PROJECT_SOURCE_DIR}/src/keypad_sim.c
         ${PROJECT_SOURCE_DIR}/src/power_sim.c
         ${PROJECT_SOURCE_DIR}/src/tester_sim.c
+        ${PROJECT_SOURCE_DIR}/src/tick_sim.c
     )
 
     target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${SDL2_LIBRARIES})
@@ -109,6 +110,7 @@ else()
         ${PROJECT_SOURCE_DIR}/src/misc.c
         ${PROJECT_SOURCE_DIR}/src/power.c
         ${PROJECT_SOURCE_DIR}/src/tester.c
+        ${PROJECT_SOURCE_DIR}/src/tick.c
     )
 
     # Specify libraries to link
