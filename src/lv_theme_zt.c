@@ -96,8 +96,8 @@ static void style_init(my_theme_t * theme)
     //lv_style_set_bg_opa(&theme->styles.transp, LV_OPA_TRANSP);
 
     style_init_reset(&theme->styles.white);
-    //lv_style_set_bg_opa(&theme->styles.white, LV_OPA_COVER);
-    //lv_style_set_bg_color(&theme->styles.white, COLOR_WHITE);
+    lv_style_set_bg_opa(&theme->styles.white, LV_OPA_COVER);
+    lv_style_set_bg_color(&theme->styles.white, lv_color_make(0, 0, 0x50));
     lv_style_set_line_width(&theme->styles.white, 1);
     lv_style_set_line_color(&theme->styles.white, COLOR_WHITE);
     //lv_style_set_arc_width(&theme->styles.white, 2);
@@ -273,6 +273,7 @@ static void theme_apply(lv_theme_t * th, lv_obj_t * obj)
 #if LV_USE_BUTTON
     else if(lv_obj_check_type(obj, &lv_button_class)) {
         lv_obj_add_style(obj, &theme->styles.dark, 0);
+        lv_obj_add_style(obj, &theme->styles.white, LV_STATE_FOCUSED);
     }
 #endif
 
@@ -411,8 +412,8 @@ static void theme_apply(lv_theme_t * th, lv_obj_t * obj)
 
 #if LV_USE_LIST
     else if(lv_obj_check_type(obj, &lv_list_class)) {
-        lv_obj_add_style(obj, &theme->styles.light, 0);
-        lv_obj_add_style(obj, &theme->styles.scrollbar, LV_PART_SCROLLBAR);
+        //lv_obj_add_style(obj, &theme->styles.light, 0);
+        //lv_obj_add_style(obj, &theme->styles.scrollbar, LV_PART_SCROLLBAR);
         return;
     }
     else if(lv_obj_check_type(obj, &lv_list_text_class)) {
@@ -420,6 +421,7 @@ static void theme_apply(lv_theme_t * th, lv_obj_t * obj)
     }
     else if(lv_obj_check_type(obj, &lv_list_button_class)) {
         lv_obj_add_style(obj, &theme->styles.dark, 0);
+        lv_obj_add_style(obj, &theme->styles.white, LV_STATE_FOCUSED);
     }
 #endif
 #if LV_USE_MSGBOX

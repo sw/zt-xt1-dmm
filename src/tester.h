@@ -78,6 +78,17 @@ typedef struct
 } tester_result_t;
 static_assert(sizeof(tester_result_t) == 88);
 
+typedef enum : uint8_t
+{
+    TOOL_NONE           = 0,
+    TOOL_RESISTOR       = 1,
+    TOOL_INDUCTOR       = 2,
+    TOOL_TEMP_DS18B20   = 3,
+    TOOL_TEMP_HUM_DHT11 = 4,
+    TOOL_INFRARED       = 5,
+    TOOL_CALIBRATE      = 6,
+} tool_t;
+
 /*
     Start the tester MCU and initialize communication with it.
     Flag `boot` selects bootloader instead of application startup.

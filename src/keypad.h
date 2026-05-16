@@ -8,8 +8,8 @@ typedef enum
     KEYPAD_RETURN,
     KEYPAD_RANGE_REL,
     KEYPAD_OK_MENU_HOLD,
-    KEYPAD_UP   = LV_KEY_UP,   // LV_KEY_PREV?
-    KEYPAD_DOWN = LV_KEY_DOWN, // LV_KEY_NEXT?
+    KEYPAD_UP   = LV_KEY_PREV,
+    KEYPAD_DOWN = LV_KEY_NEXT,
 } keypad_t;
 
 void keypad_init(void);

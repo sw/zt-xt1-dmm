@@ -13,6 +13,16 @@ typedef struct
 
 extern lv_obj_t *screen_dmm;
 extern lv_obj_t *screen_tester;
+extern lv_obj_t *screen_tool;
 
 void screen_dmm_create(void);
 void screen_tester_create(void);
+void screen_tool_create(void);
+
+extern const lv_image_dsc_t img_resistor;
+extern const lv_image_dsc_t img_inductor;
+
+extern const lv_image_dsc_t *img_probes[];
+
+void resistor_fmt(lv_obj_t *label, float resistance);
+void inductor_fmt(lv_obj_t *label, float inductance_uH, float resistance);

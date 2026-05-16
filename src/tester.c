@@ -137,15 +137,11 @@ bool tester_get(tester_result_t *result)
         return true;
     }
 
-    if (rx_buf.id == 2) /* main result */
+    if (   (rx_buf.id == 2)     /* main result */
+        || (rx_buf.id == 4) )   /* tool result */
     {
         memcpy(result, rx_buf.payload, rx_buf.length);
         return true;
-    }
-
-    if (rx_buf.id == 4) /* tool result */
-    {
-
     }
 
     if (rx_buf.id == 8) /* calibration */

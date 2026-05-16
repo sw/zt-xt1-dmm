@@ -31,16 +31,9 @@ extern const lv_image_dsc_t img_diode;
 extern const lv_image_dsc_t img_edoid;
 extern const lv_image_dsc_t img_zener;
 extern const lv_image_dsc_t img_capacitor;
-extern const lv_image_dsc_t img_resistor;
-extern const lv_image_dsc_t img_inductor;
 
-extern const lv_image_dsc_t img_probe1;
-extern const lv_image_dsc_t img_probe2;
-extern const lv_image_dsc_t img_probe3;
 extern const lv_image_dsc_t img_probea;
 extern const lv_image_dsc_t img_probek;
-
-static const lv_image_dsc_t *img_probes[] = { &img_probe1, &img_probe2, &img_probe3 };
 
 static void screen_clear(void)
 {
@@ -83,8 +76,7 @@ static lv_obj_t *screen_tester_handle_key(lv_event_code_t event_code, keypad_t k
                 beep_short();
                 zener_enabled = false;
                 tester_zener_enable(zener_enabled);
-                //return screen_tool;
-                break;
+                return screen_tool;
         }
     }
     else if (event_code == LV_EVENT_LONG_PRESSED)
@@ -450,34 +442,7 @@ static void component_resistor(const tester_result_t *result)
     lv_obj_set_pos(probes[2], 156, 126);
     lv_image_set_src(probes[2], img_probes[result->probes[2]]);
 
-    if (result->resistance < 10.0f)
-    {
-        lv_label_set_text_fmt(values, "%0.2fΩ", result->resistance);
-    }
-    else if (result->resistance < 1e3f)
-    {
-        lv_label_set_text_fmt(values, "%0.1fΩ", result->resistance);
-    }
-    else if (result->resistance < 10e3f)
-    {
-        lv_label_set_text_fmt(values, "%0.0fΩ", result->resistance);
-    }
-    else if (result->resistance < 100e3f)
-    {
-        lv_label_set_text_fmt(values, "%0.2fkΩ", result->resistance / 1e3f);
-    }
-    else if (result->resistance < 1e6f)
-    {
-        lv_label_set_text_fmt(values, "%0.1fkΩ", result->resistance / 1e3f);
-    }
-    else if (result->resistance < 10e6f)
-    {
-        lv_label_set_text_fmt(values, "%0.2fMΩ", result->resistance / 1e6f);
-    }
-    else if (result->resistance < 100e6f)
-    {
-        lv_label_set_text_fmt(values, "%0.1fMΩ", result->resistance / 1e6f);
-    }
+    resistor_fmt(values, result->resistance);
 }
 
 static void component_inductor(const tester_result_t *result)
@@ -492,20 +457,7 @@ static void component_inductor(const tester_result_t *result)
     lv_obj_set_pos(probes[2], 156, 126);
     lv_image_set_src(probes[2], img_probes[result->probes[2]]);
 
-    char r_s[16] = { 0 };
-    if (result->resistance < 1e3f)
-    {
-        sprintf(r_s, "\nR = %0.1fΩ", result->resistance);
-    }
-
-    if (result->inductance_uH < 100e3f)
-    {
-        lv_label_set_text_fmt(values, "%0.2fmH%s", result->inductance_uH / 1e3f, r_s);
-    }
-    else
-    {
-        lv_label_set_text_fmt(values, "%0.2fH%s", result->inductance_uH / 1e6f, r_s);
-    }
+    inductor_fmt(values, result->inductance_uH, result->resistance);
 }
 
 static void component_zener(const tester_result_t *result)

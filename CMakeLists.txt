@@ -49,8 +49,10 @@ set(SOURCES_C
     ${PROJECT_SOURCE_DIR}/src/img/zener.c
     ${PROJECT_SOURCE_DIR}/src/lv_theme_zt.c
     ${PROJECT_SOURCE_DIR}/src/main.c
+    ${PROJECT_SOURCE_DIR}/src/screen.c
     ${PROJECT_SOURCE_DIR}/src/screen_dmm.c
     ${PROJECT_SOURCE_DIR}/src/screen_tester.c
+    ${PROJECT_SOURCE_DIR}/src/screen_tool.c
 )
 
 add_compile_options(-g)

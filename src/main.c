@@ -111,6 +111,7 @@ int main(void)
 
     screen_dmm_create();
     screen_tester_create();
+    screen_tool_create();
 
     lv_timer_handler();
     do
