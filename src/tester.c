@@ -105,7 +105,8 @@ void USART3_IRQHandler(void)
 
 bool tester_get(tester_result_t *result)
 {
-    if (atomic_exchange(&rx_len, 0) == 0)
+    uint_fast8_t len = atomic_exchange(&rx_len, 0);
+    if (len < offsetof(uart_frame_t, payload))
     {
         return false;
     }
@@ -118,7 +119,7 @@ bool tester_get(tester_result_t *result)
 
     if (checksum != rx_buf.checksum)
     {
-        print_line("id=%u len=%u chksum rcv=%x calc=%x", rx_buf.id, rx_len, rx_buf.checksum, checksum);
+        print_line("id=%u len=%u/%u chksum rcv=%x calc=%x", rx_buf.id, len, rx_buf.length, rx_buf.checksum, checksum);
         return false;
     }
 
