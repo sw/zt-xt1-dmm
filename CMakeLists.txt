@@ -146,6 +146,15 @@ else()
         ${CMAKE_PROJECT_NAME}.bin
         ${CMAKE_PROJECT_NAME}.lst
     )
+
+    include(ExternalProject)
+    ExternalProject_Add(tester
+        SOURCE_DIR ${PROJECT_SOURCE_DIR}/tester
+        BUILD_COMMAND ${CMAKE_COMMAND} -E chdir <SOURCE_DIR> ${CMAKE_COMMAND} --workflow Release
+        BUILD_ALWAYS TRUE
+        INSTALL_COMMAND ""
+    )
+    add_dependencies(${CMAKE_PROJECT_NAME} tester)
 endif()
 
 # Specify target compile definitions

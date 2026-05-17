@@ -229,7 +229,7 @@ bool tester_check_update(void)
 {
     static const uint8_t tester_fw[] =
     {
-        #embed "../n32g031.bin"
+        #embed "../tester/build/Release/zt_xt1_tester.bin"
     };
     static ssize_t offset = -2;
 

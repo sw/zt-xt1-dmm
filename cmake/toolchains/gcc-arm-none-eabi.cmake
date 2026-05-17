@@ -30,4 +30,4 @@ set(CMAKE_EXECUTABLE_SUFFIX_CXX     ".elf")
 
 set(CMAKE_TRY_COMPILE_TARGET_TYPE   STATIC_LIBRARY)
 
-string(APPEND CMAKE_EXE_LINKER_FLAGS " -specs=picolibc.specs -lnosys")
+set(CMAKE_EXE_LINKER_FLAGS "-specs=picolibc.specs -lnosys")
