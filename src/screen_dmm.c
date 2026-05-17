@@ -320,7 +320,7 @@ void screen_dmm_create(void)
 
     auto_rel = label_create_fixed(top_row, "AUTO");
 
-    meas_freq = label_create_fixed(top_row, "0.000Hz");
+    meas_freq = label_create_fixed(top_row, "0.000kHz");
 
     lv_obj_t *batt = lv_label_create(top_row);
     lv_label_set_text_static(batt, "BATT"); /* TODO */

@@ -110,7 +110,7 @@ bool tester_get(tester_result_t *result)
         return false;
     }
 
-    uint_fast16_t checksum = 0;
+    uint16_t checksum = 0;
     for (size_t i = 0; i < rx_buf.length; i++)
     {
         checksum += rx_buf.payload[i];
@@ -118,7 +118,7 @@ bool tester_get(tester_result_t *result)
 
     if (checksum != rx_buf.checksum)
     {
-        print_line("chksum rcv=%x calc=%x", rx_buf.checksum, checksum);
+        print_line("id=%u len=%u chksum rcv=%x calc=%x", rx_buf.id, rx_len, rx_buf.checksum, checksum);
         return false;
     }
 

@@ -98,6 +98,7 @@ static char dmm_7seg_to_ascii(uint_fast8_t x)
 {
     static const uint8_t seg[] = {
     /*    afe.bgcd */
+        0b00000000, /* no segments lit */
         0b11101011, /* 🯰 */
         0b00001010, /* 🯱 */
         0b10101101, /* 🯲 */
@@ -123,7 +124,7 @@ static char dmm_7seg_to_ascii(uint_fast8_t x)
     {
         if (x == seg[i])
         {
-            return "0123456789AutoLEC"[i];
+            return " 0123456789AutoLEC"[i];
         }
     }
     return '?';
