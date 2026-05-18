@@ -26,15 +26,7 @@ typedef union
         uint8_t cr1;
         uint8_t cr2;
     } boot;
-    struct
-    {
-        uint8_t id;
-        uint8_t counter;
-        uint16_t length;
-        uint16_t checksum;
-        uint8_t payload[88];
-    };
-    uint8_t raw[94];
+    tester_uart_frame_t app;
 } uart_frame_t;
 static_assert(sizeof(uart_frame_t) == 94);
 
@@ -106,46 +98,47 @@ void USART3_IRQHandler(void)
 bool tester_get(tester_result_t *result)
 {
     uint_fast8_t len = atomic_exchange(&rx_len, 0);
-    if (len < offsetof(uart_frame_t, payload))
+    if (len < offsetof(tester_uart_frame_t, payload))
     {
         return false;
     }
 
     uint16_t checksum = 0;
-    for (size_t i = 0; i < rx_buf.length; i++)
+    for (size_t i = 0; i < rx_buf.app.length; i++)
     {
-        checksum += rx_buf.payload[i];
+        checksum += rx_buf.app.payload[i];
     }
 
-    if (checksum != rx_buf.checksum)
+    if (checksum != rx_buf.app.checksum)
     {
-        print_line("id=%u len=%u/%u chksum rcv=%x calc=%x", rx_buf.id, len, rx_buf.length, rx_buf.checksum, checksum);
+        print_line("id=%u len=%u/%u chksum rcv=%x calc=%x",
+            rx_buf.app.id, len, rx_buf.app.length, rx_buf.app.checksum, checksum);
         return false;
     }
 
-    if (rx_buf.id == 6)
+    if (rx_buf.app.id == 6)
     {
-        if ((rx_buf.counter == 1) && (rx_buf.length == 4))
+        if ((rx_buf.app.counter == 1) && (rx_buf.app.length == 4))
         {
             /* startup frame */
         }
         return false;
     }
 
-    if (rx_buf.id == 1) /* testing */
+    if (rx_buf.app.id == 1) /* testing */
     {
         result->component = COMPONENT_TESTING;
         return true;
     }
 
-    if (   (rx_buf.id == 2)     /* main result */
-        || (rx_buf.id == 4) )   /* tool result */
+    if (   (rx_buf.app.id == 2)     /* main result */
+        || (rx_buf.app.id == 4) )   /* tool result */
     {
-        memcpy(result, rx_buf.payload, rx_buf.length);
+        memcpy(result, rx_buf.app.payload, rx_buf.app.length);
         return true;
     }
 
-    if (rx_buf.id == 8) /* calibration */
+    if (rx_buf.app.id == 8) /* calibration */
     {
 
     }
@@ -155,7 +148,7 @@ bool tester_get(tester_result_t *result)
 
 void tester_send(uint_fast8_t id, uint_fast8_t payload)
 {
-    uart_frame_t tx_frame;
+    tester_uart_frame_t tx_frame;
 
     tx_frame.id = id;
     tx_frame.counter = 0; /* TODO: do we need to keep track of this? */
@@ -163,7 +156,7 @@ void tester_send(uint_fast8_t id, uint_fast8_t payload)
     tx_frame.checksum = payload;
     tx_frame.payload[0] = payload;
 
-    for (size_t i = 0; i < offsetof(uart_frame_t, payload) + 1; i++)
+    for (size_t i = 0; i < offsetof(tester_uart_frame_t, payload) + 1; i++)
     {
         while (!usart_flag_get(USART3, USART_TDBE_FLAG)) { }
         usart_data_transmit(USART3, tx_frame.raw[i]);
