@@ -291,6 +291,8 @@ bool dmm_get(dmm_result_t *result)
     result->stat_values = stat;
     result->stat_nb = stat_nb;
 
+    exint_interrupt_enable(EXINT_LINE_13, result->continuity);
+
     return true;
 }
 

@@ -1,27 +1,40 @@
 #include <math.h>
 #include <stdio.h>
 
-#ifdef AT32F403ACGT7
-#include "at32f403a_407_exint.h"
-#endif
-
 #include "beep.h"
 #include "dmm.h"
-#include "power.h"
 #include "screen.h"
 
 #define CHART_Y_DIVISION 5
 #define CHART_Y_SCALE (1 << 16)
 
+typedef enum
+{
+    DMM_MODE_DC_VOLT      =  0,
+    DMM_MODE_AC_VOLT      =  1,
+    DMM_MODE_DC_MILLIVOLT =  2,
+    DMM_MODE_AC_MILLIVOLT =  3,
+    DMM_MODE_DC_AMP       =  4,
+    DMM_MODE_AC_AMP       =  5,
+    DMM_MODE_DC_MILLIAMP  =  6,
+    DMM_MODE_AC_MILLIAMP  =  7,
+    DMM_MODE_RESISTANCE   =  8,
+    DMM_MODE_CONTINUITY   =  9,
+    DMM_MODE_DIODE        = 10,
+    DMM_MODE_CAPACITANCE  = 11,
+    DMM_MODE_TEMPERATURE  = 12,
+} dmm_mode_t;
+
 lv_obj_t *screen_dmm;
 
-static int dmm_mode;
+static dmm_mode_t dmm_mode;
 static bool dmm_hold;
 
 static lv_obj_t *hold;
 static lv_obj_t *auto_rel;
 static lv_obj_t *meas_freq;
 static lv_obj_t *ac_dc;
+static lv_obj_t *batt;
 
 static lv_obj_t *meas_main;
 static lv_obj_t *meas_unit;
@@ -92,10 +105,23 @@ static lv_obj_t *screen_dmm_handle_key(lv_event_code_t event_code, keypad_t key)
                 beep_short();
                 switch (dmm_mode)
                 {
-                    case 4:  dmm_send(0x80); dmm_mode = 5; break;
-                    case 5:  dmm_send(0x90); dmm_mode = 6; break;
-                    case 6:  dmm_send(0x90); dmm_mode = 7; break;
-                    default: dmm_send(0x80); dmm_mode = 4; break;
+                    case DMM_MODE_DC_AMP:
+                        dmm_send(0x80);
+                        dmm_mode = DMM_MODE_AC_AMP;
+                        break;
+                    case DMM_MODE_AC_AMP:
+                        dmm_send(0x90);
+                        dmm_mode = DMM_MODE_DC_MILLIAMP;
+                        break;
+                    case DMM_MODE_DC_MILLIAMP:
+                        dmm_send(0x90);
+                        dmm_mode = DMM_MODE_AC_MILLIAMP;
+                        break;
+                    case DMM_MODE_AC_MILLIAMP:
+                    default:
+                        dmm_send(0x80);
+                        dmm_mode = DMM_MODE_DC_AMP;
+                        break;
                 }
                 break;
 
@@ -103,15 +129,28 @@ static lv_obj_t *screen_dmm_handle_key(lv_event_code_t event_code, keypad_t key)
                 beep_short();
                 switch (dmm_mode)
                 {
-                    case 0:  dmm_send(0x50); dmm_mode = 1; break;
-                    case 1:  dmm_send(0x60); dmm_mode = 2; break;
-                    case 2:  dmm_send(0x60); dmm_mode = 3; break;
-                    default: dmm_send(0x50); dmm_mode = 0; break;
+                    case DMM_MODE_DC_VOLT:
+                        dmm_send(0x50);
+                        dmm_mode = DMM_MODE_AC_VOLT;
+                        break;
+                    case DMM_MODE_AC_VOLT:
+                        dmm_send(0x60);
+                        dmm_mode = DMM_MODE_DC_MILLIVOLT;
+                        break;
+                    case DMM_MODE_DC_MILLIVOLT:
+                        dmm_send(0x60);
+                        dmm_mode = DMM_MODE_AC_MILLIVOLT;
+                        break;
+                    case DMM_MODE_AC_MILLIVOLT:
+                    default:
+                        dmm_send(0x50);
+                        dmm_mode = DMM_MODE_DC_VOLT;
+                        break;
                 }
                 break;
 
             case KEYPAD_OK_MENU_HOLD:
-                if (dmm_mode != 9)
+                if (dmm_mode != DMM_MODE_CONTINUITY)
                 {
                     beep_short();
                 }
@@ -127,37 +166,34 @@ static lv_obj_t *screen_dmm_handle_key(lv_event_code_t event_code, keypad_t key)
             case KEYPAD_RETURN:
                 switch (dmm_mode)
                 {
-                    case 8:
+                    case DMM_MODE_RESISTANCE:
                         beep_short();
                         dmm_send(0x40);
-                        dmm_mode = 9;
+                        dmm_mode = DMM_MODE_CONTINUITY;
                         break;
 
-                    case 9:
+                    case DMM_MODE_CONTINUITY:
                         dmm_send(0x40);
-                        dmm_mode = 10;
+                        dmm_mode = DMM_MODE_DIODE;
                         break;
 
-                    case 10:
+                    case DMM_MODE_DIODE:
                         beep_short();
                         dmm_send(0x40);
-                        dmm_mode = 11;
+                        dmm_mode = DMM_MODE_CAPACITANCE;
                         break;
 
-                    case 11:
+                    case DMM_MODE_CAPACITANCE:
                         beep_short();
                         dmm_send(0xcc);
-                        dmm_mode = 12;
+                        dmm_mode = DMM_MODE_TEMPERATURE;
                         break;
 
-                    case 13:
-                        dmm_stat_reset();
-                        break;
-
+                    case DMM_MODE_TEMPERATURE:
                     default:
                         beep_short();
                         dmm_send(0x40);
-                        dmm_mode = 8;
+                        dmm_mode = DMM_MODE_RESISTANCE;
                         break;
                 }
                 break;
@@ -184,6 +220,7 @@ static lv_obj_t *screen_dmm_handle_key(lv_event_code_t event_code, keypad_t key)
                 //return screen_setup;
                 break;
 
+            case KEYPAD_POWER:
             case KEYPAD_RETURN:
             case KEYPAD_DOWN:
                 break;
@@ -199,10 +236,6 @@ static void screen_dmm_update(void)
     {
         return;
     }
-
-#ifdef AT32F403ACGT7
-    exint_interrupt_enable(EXINT_LINE_13, result.continuity);
-#endif
 
     if (dmm_hold)
     {
@@ -322,8 +355,8 @@ void screen_dmm_create(void)
 
     meas_freq = label_create_fixed(top_row, "0.000kHz");
 
-    lv_obj_t *batt = lv_label_create(top_row);
-    lv_label_set_text_static(batt, "BATT"); /* TODO */
+    batt = lv_label_create(top_row);
+    lv_label_set_text_static(batt, ""); /* TODO: battery indicator */
 
 
     lv_obj_t *meas_row = lv_obj_create(rows);
