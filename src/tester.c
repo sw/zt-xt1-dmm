@@ -23,8 +23,17 @@ typedef union
         uint8_t cmd_h;
         uint8_t cmd_l;
         uint16_t len;
-        uint8_t cr1;
-        uint8_t cr2;
+        union {
+            struct {
+                uint8_t cr1;
+                uint8_t cr2;
+            } empty;
+            struct {
+                uint8_t payload[16];
+                uint8_t cr1;
+                uint8_t cr2;
+            } opt_rw;
+        };
     } boot;
     tester_uart_frame_t app;
 } uart_frame_t;
@@ -178,6 +187,7 @@ typedef enum
     CMD_FLASH_ERASE    = 0x30,
     CMD_FLASH_DWNLD    = 0x31,
     CMD_DATA_CRC_CHECK = 0x32,
+    CMD_OPT_RW         = 0x40,
 } tester_boot_cmd_t;
 
 typedef __PACKED_UNION
@@ -197,12 +207,12 @@ static_assert(sizeof(tester_boot_tx_t) == 159);
 
 static tester_boot_tx_t boot_tx_buf;
 
-static void tester_boot_cmd(tester_boot_cmd_t cmd, size_t len, uint_fast32_t param)
+static void tester_boot_cmd(tester_boot_cmd_t cmd_h, uint_fast8_t cmd_l, size_t len, uint_fast32_t param)
 {
     boot_tx_buf.sta1  = 0xAA,
     boot_tx_buf.sta2  = 0x55,
-    boot_tx_buf.cmd_h = cmd;
-    boot_tx_buf.cmd_l = 0;
+    boot_tx_buf.cmd_h = cmd_h;
+    boot_tx_buf.cmd_l = cmd_l;
     boot_tx_buf.len   = len;
     boot_tx_buf.param = param;
     uint_fast8_t xor = 0;
@@ -225,9 +235,9 @@ bool tester_check_update(void)
     {
         #embed "../tester/build/Release/zt_xt1_tester.bin"
     };
-    static ssize_t offset = -2;
+    static ssize_t offset = -3;
 
-    if (offset == -2)
+    if (offset == -3)
     {
         tester_init(true);
 
@@ -253,7 +263,7 @@ bool tester_check_update(void)
         boot_tx_buf.data[22] = (uint8_t)(sizeof(tester_fw) >> 16);
         boot_tx_buf.data[23] = (uint8_t)(sizeof(tester_fw) >> 24);
 
-        tester_boot_cmd(CMD_DATA_CRC_CHECK, 24, crc_expected);
+        tester_boot_cmd(CMD_DATA_CRC_CHECK, 0, 24, crc_expected);
 
         /* wait for CRC result */
         while (atomic_exchange(&rx_len, 0) == 0) { }
@@ -269,16 +279,18 @@ bool tester_check_update(void)
                 rx_buf.boot.cmd_h,
                 rx_buf.boot.cmd_l,
                 rx_buf.boot.len,
-                rx_buf.boot.cr1,
-                rx_buf.boot.cr2);
+                rx_buf.boot.empty.cr1,
+                rx_buf.boot.empty.cr2);
             print_line("couldn't do CRC check");
             return false;
         }
 
-        if ((rx_buf.boot.cr1 == 0xA0) && (rx_buf.boot.cr2 == 0x00))
+        if ((rx_buf.boot.empty.cr1 == 0xA0) && (rx_buf.boot.empty.cr2 == 0x00))
         {
             return false;   /* CRC ok, no update necessary */
         }
+
+        print_line("tester CRC fail, perform update...");
 
         /*
             The N32G031 bootloader has an undocumented rate-limiting behaviour.
@@ -287,18 +299,20 @@ bool tester_check_update(void)
         */
         delay_ms(10);
 
-        /* set baud rate to 115200 */
-        tester_boot_cmd(CMD_SET_BR, 0, 0xC20100);
+        /* check write protection */
+        memset(boot_tx_buf.data, 0, 16);
+        tester_boot_cmd(CMD_OPT_RW, 0, 16, 0);
 
-        /* wait for baud rate change */
+        /* wait for opt_rw response */
         while (atomic_exchange(&rx_len, 0) == 0) { }
 
         if (   (rx_buf.boot.sta1 != 0xAA)
             || (rx_buf.boot.sta2 != 0x55)
-            || (rx_buf.boot.cmd_h != CMD_SET_BR)
-            || (rx_buf.boot.len != 0)
-            || (rx_buf.boot.cr1 != 0xA0)
-            || (rx_buf.boot.cr2 != 0x00) )
+            || (rx_buf.boot.cmd_h != CMD_OPT_RW)
+            || (rx_buf.boot.cmd_l != 0)
+            || (rx_buf.boot.len != 16)
+            || (rx_buf.boot.opt_rw.cr1 != 0xA0)
+            || (rx_buf.boot.opt_rw.cr2 != 0x00) )
         {
             print_line("%02x %02x %02x %02x %04x %02x %02x",
                 rx_buf.boot.sta1,
@@ -306,22 +320,66 @@ bool tester_check_update(void)
                 rx_buf.boot.cmd_h,
                 rx_buf.boot.cmd_l,
                 rx_buf.boot.len,
-                rx_buf.boot.cr1,
-                rx_buf.boot.cr2);
-            print_line("couldn't set baud rate");
+                rx_buf.boot.opt_rw.cr1,
+                rx_buf.boot.opt_rw.cr2);
+            print_line("couldn't read option bytes");
             return false;
         }
 
-        usart_init(USART3, 115200, USART_DATA_8BITS, USART_STOP_1_BIT);
-
         delay_ms(10);   /* rate limiting */
-        tester_boot_cmd(CMD_FLASH_ERASE, 0, DIV_ROUND_UP(sizeof(tester_fw), TESTER_FLASH_PAGE_SIZE) << 16);
-        print_line("tester CRC fail, perform update...");
-        offset++;
+
+        if (   (rx_buf.boot.opt_rw.payload[ 0] == 0xA5)     /* OB_RDP1_DISABLE */
+            && (rx_buf.boot.opt_rw.payload[12] != 0xCC) )   /* ~OB_RDP2_ENABLE */
+        {
+            /* not protected */
+            tester_boot_cmd(CMD_FLASH_ERASE, 0, 0, DIV_ROUND_UP(sizeof(tester_fw), TESTER_FLASH_PAGE_SIZE) << 16);
+            offset++;
+            return true;
+        }
+
+        /* reset write protection */
+        memset(boot_tx_buf.data, 0xFF, 16);
+        boot_tx_buf.data[0] = 0xA5; /* OB_RDP1_DISABLE */
+        boot_tx_buf.data[2] = 0x3F; /* USER */
+        for (uint_fast8_t i = 0; i < 16; i += 2)
+        {
+            boot_tx_buf.data[i + 1] = ~boot_tx_buf.data[i];
+        }
+        tester_boot_cmd(CMD_OPT_RW, 1, 16, 0);
+
+        /* wait for opt_rw response */
+        while (atomic_exchange(&rx_len, 0) == 0) { }
+
+        if (   (rx_buf.boot.sta1 != 0xAA)
+            || (rx_buf.boot.sta2 != 0x55)
+            || (rx_buf.boot.cmd_h != CMD_OPT_RW)
+            || (rx_buf.boot.cmd_l != 1)
+            || (rx_buf.boot.len != 16)
+            || (rx_buf.boot.opt_rw.cr1 != 0xA0)
+            || (rx_buf.boot.opt_rw.cr2 != 0x00) )
+        {
+            print_line("%02x %02x %02x %02x %04x %02x %02x",
+                rx_buf.boot.sta1,
+                rx_buf.boot.sta2,
+                rx_buf.boot.cmd_h,
+                rx_buf.boot.cmd_l,
+                rx_buf.boot.len,
+                rx_buf.boot.opt_rw.cr1,
+                rx_buf.boot.opt_rw.cr2);
+            print_line("couldn't write option bytes");
+            return false;
+        }
+
+        tester_init(true);
+
+        /* give tester MCU time to boot */
+        delay_ms(5);
+
+        offset = -1;
         return true;
     }
 
-    if (offset == -1)
+    if (offset == -2)
     {
         /* wait for erase result */
         while (atomic_exchange(&rx_len, 0) == 0) { }
@@ -330,8 +388,8 @@ bool tester_check_update(void)
             || (rx_buf.boot.sta2 != 0x55)
             || (rx_buf.boot.cmd_h != CMD_FLASH_ERASE)
             || (rx_buf.boot.len != 0)
-            || (rx_buf.boot.cr1 != 0xA0)
-            || (rx_buf.boot.cr2 != 0x00) )
+            || (rx_buf.boot.empty.cr1 != 0xA0)
+            || (rx_buf.boot.empty.cr2 != 0x00) )
         {
             print_line("%02x %02x %02x %02x %04x %02x %02x",
                 rx_buf.boot.sta1,
@@ -339,12 +397,45 @@ bool tester_check_update(void)
                 rx_buf.boot.cmd_h,
                 rx_buf.boot.cmd_l,
                 rx_buf.boot.len,
-                rx_buf.boot.cr1,
-                rx_buf.boot.cr2);
+                rx_buf.boot.empty.cr1,
+                rx_buf.boot.empty.cr2);
             print_line("couldn't erase flash");
             return false;
         }
 
+        delay_ms(10);   /* rate limiting */
+        offset++;
+        return true;
+    }
+
+    if (offset == -1)
+    {
+        /* set baud rate to 115200 */
+        tester_boot_cmd(CMD_SET_BR, 0, 0, 0xC20100);
+
+        /* wait for baud rate change */
+        while (atomic_exchange(&rx_len, 0) == 0) { }
+
+        if (   (rx_buf.boot.sta1 != 0xAA)
+            || (rx_buf.boot.sta2 != 0x55)
+            || (rx_buf.boot.cmd_h != CMD_SET_BR)
+            || (rx_buf.boot.len != 0)
+            || (rx_buf.boot.empty.cr1 != 0xA0)
+            || (rx_buf.boot.empty.cr2 != 0x00) )
+        {
+            print_line("%02x %02x %02x %02x %04x %02x %02x",
+                rx_buf.boot.sta1,
+                rx_buf.boot.sta2,
+                rx_buf.boot.cmd_h,
+                rx_buf.boot.cmd_l,
+                rx_buf.boot.len,
+                rx_buf.boot.empty.cr1,
+                rx_buf.boot.empty.cr2);
+            print_line("couldn't set baud rate");
+            return false;
+        }
+
+        usart_init(USART3, 115200, USART_DATA_8BITS, USART_STOP_1_BIT);
         delay_ms(10);   /* rate limiting */
         offset++;
     }
@@ -357,8 +448,8 @@ bool tester_check_update(void)
             || (rx_buf.boot.sta2 != 0x55)
             || (rx_buf.boot.cmd_h != CMD_FLASH_DWNLD)
             || (rx_buf.boot.len != 0)
-            || (rx_buf.boot.cr1 != 0xA0)
-            || (rx_buf.boot.cr2 != 0x00) )
+            || (rx_buf.boot.empty.cr1 != 0xA0)
+            || (rx_buf.boot.empty.cr2 != 0x00) )
         {
             print_line("%02x %02x %02x %02x %04x %02x %02x",
                 rx_buf.boot.sta1,
@@ -366,8 +457,8 @@ bool tester_check_update(void)
                 rx_buf.boot.cmd_h,
                 rx_buf.boot.cmd_l,
                 rx_buf.boot.len,
-                rx_buf.boot.cr1,
-                rx_buf.boot.cr2);
+                rx_buf.boot.empty.cr1,
+                rx_buf.boot.empty.cr2);
             print_line("write error");
             return false;
         }
@@ -390,7 +481,7 @@ bool tester_check_update(void)
     *(uint32_t *)(boot_tx_buf.data + 16 + TESTER_DOWNLOAD_CHUNK_SIZE) =
         crc_block_calculate((uint32_t *)(tester_fw + offset), TESTER_DOWNLOAD_CHUNK_SIZE / sizeof(uint32_t));
 
-    tester_boot_cmd(CMD_FLASH_DWNLD, 16 + TESTER_DOWNLOAD_CHUNK_SIZE + 4, TESTER_FLASH_BASE + offset);
+    tester_boot_cmd(CMD_FLASH_DWNLD, 0, 16 + TESTER_DOWNLOAD_CHUNK_SIZE + 4, TESTER_FLASH_BASE + offset);
 
     return true;
 }
