@@ -11,7 +11,7 @@
 */
 void tester_init(bool boot);
 
-bool tester_get(tester_result_t *result);
+bool tester_get(tester_result_t *result, self_adjust_state_t *self_adjust);
 
 void tester_send(uint_fast8_t id, uint_fast8_t payload);
 

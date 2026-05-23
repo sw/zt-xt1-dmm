@@ -12,11 +12,12 @@ typedef struct
 {
     const char *text;
     tool_t tool;
-    void (*update_cb)(const tester_result_t *result);
+    void (*update_cb)(const tester_result_t *result, const self_adjust_state_t *self_adjust);
 } item_t;
 
-static void tool_resistor(const tester_result_t *result)
+static void tool_resistor(const tester_result_t *result, const self_adjust_state_t *self_adjust)
 {
+    (void)self_adjust;
     if (result->component == COMPONENT_RESISTOR)
     {
         lv_image_set_src(probes[0], img_probes[result->probes[0]]);
@@ -26,8 +27,9 @@ static void tool_resistor(const tester_result_t *result)
     }
 }
 
-static void tool_inductor(const tester_result_t *result)
+static void tool_inductor(const tester_result_t *result, const self_adjust_state_t *self_adjust)
 {
+    (void)self_adjust;
     if (result->component == COMPONENT_INDUCTOR)
     {
         lv_image_set_src(probes[0], img_probes[result->probes[0]]);
@@ -37,8 +39,9 @@ static void tool_inductor(const tester_result_t *result)
     }
 }
 
-static void tool_ds18b20(const tester_result_t *result)
+static void tool_ds18b20(const tester_result_t *result, const self_adjust_state_t *self_adjust)
 {
+    (void)self_adjust;
     if (result->component == COMPONENT_DS18B20)
     {
         lv_label_set_text_fmt(info,
@@ -51,8 +54,9 @@ static void tool_ds18b20(const tester_result_t *result)
     }
 }
 
-static void tool_dht11(const tester_result_t *result)
+static void tool_dht11(const tester_result_t *result, const self_adjust_state_t *self_adjust)
 {
+    (void)self_adjust;
     if (result->component == COMPONENT_DHT11)
     {
         lv_label_set_text_fmt(info,
@@ -63,8 +67,9 @@ static void tool_dht11(const tester_result_t *result)
     }
 }
 
-static void tool_infrared(const tester_result_t *result)
+static void tool_infrared(const tester_result_t *result, const self_adjust_state_t *self_adjust)
 {
+    (void)self_adjust;
     if (result->component == COMPONENT_INFRARED)
     {
         lv_label_set_text_fmt(info,
@@ -77,13 +82,59 @@ static void tool_infrared(const tester_result_t *result)
     }
 }
 
+static void tool_self_adjust(const tester_result_t *result, const self_adjust_state_t *self_adjust)
+{
+    (void)result;
+
+    const char *s = "";
+    switch (self_adjust->step)
+    {
+        case SELF_ADJUST_IDLE:
+            s = "Idle";
+            break;
+        case SELF_ADJUST_PROBES_CHECK_SHORTED:
+            s = "Please short all probes";
+            break;
+        case SELF_ADJUST_PROBES_RESISTANCE:
+            s = "Measuring resistances...";
+            break;
+        case SELF_ADJUST_PROBES_CHECK_OPEN:
+            s = "Please disconnect probes";
+            break;
+        case SELF_ADJUST_PROBES_CAPACITANCE:
+            s = "Measuring capacitances...";
+            break;
+        case SELF_ADJUST_STORE:
+            s = "New values stored";
+            break;
+        case SELF_ADJUST_TIMEOUT:
+            s = "Error: Timeout";
+            break;
+    }
+    lv_label_set_text_fmt(info, "%s\nRp = %.1fΩ\nRd = %.1fΩ\n"
+        "C12 = %.1fpF\n"
+        "C13 = %.1fpF\n"
+        "C21 = %.1fpF\n"
+        "C23 = %.1fpF\n"
+        "C31 = %.1fpF\n"
+        "C32 = %.1fpF",
+        s, self_adjust->val.rp, self_adjust->val.rd,
+        self_adjust->val.probe12_cap,
+        self_adjust->val.probe13_cap,
+        self_adjust->val.probe21_cap,
+        self_adjust->val.probe23_cap,
+        self_adjust->val.probe31_cap,
+        self_adjust->val.probe32_cap);
+}
+
 static const item_t items[] =
 {
-    { .text = "Resistor",  .tool = TOOL_RESISTOR,       .update_cb = tool_resistor },
-    { .text = "Inductor",  .tool = TOOL_INDUCTOR,       .update_cb = tool_inductor },
-    { .text = "DS18B20" ,  .tool = TOOL_TEMP_DS18B20,   .update_cb = tool_ds18b20  },
-    { .text = "DHT11",     .tool = TOOL_TEMP_HUM_DHT11, .update_cb = tool_dht11    },
-    { .text = "IR Decode", .tool = TOOL_INFRARED,       .update_cb = tool_infrared },
+    { .text = "Resistor",    .tool = TOOL_RESISTOR,       .update_cb = tool_resistor    },
+    { .text = "Inductor",    .tool = TOOL_INDUCTOR,       .update_cb = tool_inductor    },
+    { .text = "DS18B20" ,    .tool = TOOL_TEMP_DS18B20,   .update_cb = tool_ds18b20     },
+    { .text = "DHT11",       .tool = TOOL_TEMP_HUM_DHT11, .update_cb = tool_dht11       },
+    { .text = "IR Decode",   .tool = TOOL_INFRARED,       .update_cb = tool_infrared    },
+    { .text = "Self-adjust", .tool = TOOL_SELF_ADJUST,    .update_cb = tool_self_adjust },
 };
 
 static void screen_clear(void)
@@ -151,14 +202,15 @@ static lv_obj_t *screen_tool_handle_key(lv_event_code_t event_code, keypad_t key
 
 static void screen_tool_update(void)
 {
-    tester_result_t result;
-    if (!tester_get(&result))
+    tester_result_t result = { 0 };
+    self_adjust_state_t self_adjust = { 0 };
+    if (!tester_get(&result, &self_adjust))
     {
         return;
     }
     screen_clear();
     const item_t *item_focus = lv_obj_get_user_data(lv_group_get_focused(group));
-    item_focus->update_cb(&result);
+    item_focus->update_cb(&result, &self_adjust);
 }
 
 static void group_focus_cb(lv_group_t *group)
@@ -188,7 +240,7 @@ void screen_tool_create(void)
     group = lv_group_create();
 
     lv_obj_t *list = lv_list_create(columns);
-    lv_obj_set_size(list, lv_pct(33), lv_pct(100));
+    lv_obj_set_size(list, lv_pct(32), lv_pct(100));
 
     for (unsigned int i = 0; i < sizeof(items) / sizeof(items[0]); i++)
     {
@@ -202,7 +254,7 @@ void screen_tool_create(void)
     lv_group_set_focus_cb(group, group_focus_cb);
 
     info = lv_label_create(columns);
-    lv_obj_set_height(info, lv_pct(50));
+    lv_obj_set_height(info, lv_pct(68));
     lv_obj_set_flex_grow(info, 1);
 
     probes[0] = lv_image_create(screen_tool);

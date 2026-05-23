@@ -478,7 +478,7 @@ static void component_zener(const tester_result_t *result)
 static void screen_tester_update(void)
 {
     tester_result_t result;
-    if (!tester_get(&result))
+    if (!tester_get(&result, NULL))
     {
         return;
     }

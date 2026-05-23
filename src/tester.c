@@ -104,7 +104,7 @@ void USART3_IRQHandler(void)
     }
 }
 
-bool tester_get(tester_result_t *result)
+bool tester_get(tester_result_t *result, self_adjust_state_t *self_adjust)
 {
     uint_fast8_t len = atomic_exchange(&rx_len, 0);
     if (len < offsetof(tester_uart_frame_t, payload))
@@ -147,12 +147,14 @@ bool tester_get(tester_result_t *result)
         return true;
     }
 
-    if (rx_buf.app.id == 8) /* calibration */
+    if (   (rx_buf.app.id == 8) /* self-adjustment */
+        && (self_adjust != NULL) )
     {
-
+        memcpy(self_adjust, rx_buf.app.payload, rx_buf.app.length);
+        return true;
     }
 
-    return true;
+    return false;
 }
 
 void tester_send(uint_fast8_t id, uint_fast8_t payload)
