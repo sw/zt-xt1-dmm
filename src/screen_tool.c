@@ -46,9 +46,11 @@ static void tool_ds18b20(const tester_result_t *result, const self_adjust_state_
     {
         lv_label_set_text_fmt(info,
             "%0.1f °C\n"
-            "%u:GND\n%u:DQ\n%u:VDD\n"
+            "%s\n"
+            "%u:GND %u:DQ %u:VDD\n"
             "ID:%" PRIX64,
             result->temperature,
+            result->ds18b20_rom_code[0] == 0x10 ? "DS18S20" : "DS18B20",
             result->probes[0] + 1, result->probes[1] + 1, result->probes[2] + 1,
             *(uint64_t *)result->ds18b20_rom_code);
     }
@@ -131,7 +133,7 @@ static const item_t items[] =
 {
     { .text = "Resistor",    .tool = TOOL_RESISTOR,       .update_cb = tool_resistor    },
     { .text = "Inductor",    .tool = TOOL_INDUCTOR,       .update_cb = tool_inductor    },
-    { .text = "DS18B20" ,    .tool = TOOL_TEMP_DS18B20,   .update_cb = tool_ds18b20     },
+    { .text = "DS18x20" ,    .tool = TOOL_TEMP_DS18B20,   .update_cb = tool_ds18b20     },
     { .text = "DHT11",       .tool = TOOL_TEMP_HUM_DHT11, .update_cb = tool_dht11       },
     { .text = "IR Decode",   .tool = TOOL_INFRARED,       .update_cb = tool_infrared    },
     { .text = "Self-adjust", .tool = TOOL_SELF_ADJUST,    .update_cb = tool_self_adjust },
@@ -254,7 +256,7 @@ void screen_tool_create(void)
     lv_group_set_focus_cb(group, group_focus_cb);
 
     info = lv_label_create(columns);
-    lv_obj_set_height(info, lv_pct(68));
+    lv_obj_set_height(info, lv_pct(69));
     lv_obj_set_flex_grow(info, 1);
 
     probes[0] = lv_image_create(screen_tool);

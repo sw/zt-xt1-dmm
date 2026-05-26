@@ -73,7 +73,6 @@ static lv_obj_t *screen_tester_handle_key(lv_event_code_t event_code, keypad_t k
                 break;
 
             case KEYPAD_DOWN:
-                beep_short();
                 zener_enabled = false;
                 tester_zener_enable(zener_enabled);
                 return screen_tool;
